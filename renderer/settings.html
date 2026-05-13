@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Glucose Settings</title>
+<style>
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Microsoft JhengHei", "Microsoft YaHei", Roboto, Arial, sans-serif;
+    font-size: 13px;
+    padding: 18px;
+    background: #f6f6f6;
+    color: #222;
+  }
+  fieldset {
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    padding: 10px 14px 14px;
+    background: #fff;
+  }
+  legend { font-weight: 600; padding: 0 6px; color: #2a7a2a; }
+  label { display: block; margin: 8px 0 4px; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 13px;
+  }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .inline { display: flex; gap: 16px; align-items: center; margin-top: 6px; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+  button {
+    padding: 8px 16px;
+    border: 1px solid #b0b0b0;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.primary { background: #2a7a2a; color: #fff; border-color: #2a7a2a; }
+  button:hover { filter: brightness(0.95); }
+  .status { margin-top: 8px; font-size: 12px; min-height: 16px; }
+  .status.ok { color: #2a7a2a; }
+  .status.err { color: #b03030; }
+  .hint { color: #777; font-size: 11px; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <fieldset>
+    <legend data-i18n="settings.languageSection">Language</legend>
+    <label data-i18n="settings.languageLabel">Interface language</label>
+    <select id="language">
+      <option value="en">English</option>
+      <option value="zh-TW">繁體中文</option>
+      <option value="zh-CN">简体中文</option>
+      <option value="ja">日本語</option>
+    </select>
+  </fieldset>
+
+  <fieldset>
+    <legend data-i18n="settings.nightscoutSection">Nightscout settings</legend>
+    <label data-i18n="settings.urlLabel">Your Nightscout URL</label>
+    <input type="text" id="nsUrl" data-i18n-placeholder="settings.urlPlaceholder" placeholder="https://09xxxxxxxx.t1ns.tw/" />
+    <div class="hint" data-i18n="settings.urlHint">Full URL including https://</div>
+
+    <label data-i18n="settings.tokenLabel">Access Token / Password</label>
+    <input type="password" id="token" data-i18n-placeholder="settings.tokenPlaceholder" placeholder="NS password / token" />
+
+    <div class="inline">
+      <label style="margin:0;"><input type="radio" name="units" value="mg/dL" /> <span data-i18n="settings.unitsMgdl">mg/dL</span></label>
+      <label style="margin:0;"><input type="radio" name="units" value="mmol/L" /> <span data-i18n="settings.unitsMmol">mmol/L</span></label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend data-i18n="settings.alarmsSection">Alarm thresholds</legend>
+    <div class="row">
+      <div>
+        <label data-i18n="settings.urgentHigh">Urgent High</label>
+        <input type="number" id="urgentHigh" />
+      </div>
+      <div>
+        <label data-i18n="settings.high">High</label>
+        <input type="number" id="high" />
+      </div>
+      <div>
+        <label data-i18n="settings.low">Low</label>
+        <input type="number" id="low" />
+      </div>
+      <div>
+        <label data-i18n="settings.urgentLow">Urgent Low</label>
+        <input type="number" id="urgentLow" />
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label data-i18n="settings.staleWarn">Stale warn (min)</label>
+        <input type="number" id="staleWarn" />
+      </div>
+      <div>
+        <label data-i18n="settings.staleUrgent">Stale urgent (min)</label>
+        <input type="number" id="staleUrgent" />
+      </div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend data-i18n="settings.displaySection">Display</legend>
+    <div class="row">
+      <div>
+        <label data-i18n="settings.fontSize">Font size (px)</label>
+        <input type="number" id="fontSize" min="12" max="96" />
+      </div>
+      <div>
+        <label data-i18n="settings.refreshSec">Refresh (seconds)</label>
+        <input type="number" id="refreshSec" min="15" max="600" />
+      </div>
+    </div>
+    <label style="margin-top:10px;"><input type="checkbox" id="showFloating" /> <span data-i18n="settings.showFloating">Show floating widget on desktop</span></label>
+    <label><input type="checkbox" id="showInMenuBar" /> <span data-i18n="settings.showInMenuBar">Show value in menu bar (macOS only)</span></label>
+    <label><input type="checkbox" id="hideDock" /> <span data-i18n="settings.hideDock">Hide Dock icon (macOS only)</span></label>
+  </fieldset>
+
+  <div class="status" id="status"></div>
+  <div class="actions">
+    <button id="testBtn" data-i18n="settings.testBtn">Test connection</button>
+    <button id="saveBtn" class="primary" data-i18n="settings.saveBtn">Verify and save</button>
+  </div>
+
+<script>
+  const numericIds = ['urgentHigh','high','low','urgentLow','staleWarn','staleUrgent','fontSize','refreshSec'];
+  const textIds = ['nsUrl','token'];
+  const boolIds = ['showFloating','showInMenuBar','hideDock'];
+  const status = document.getElementById('status');
+  const languageSelect = document.getElementById('language');
+
+  let bundle = {};
+  let currentLang = 'en';
+
+  function fmt(key, params) {
+    let s = bundle[key] || key;
+    if (params) s = s.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? params[k] : `{${k}}`));
+    return s;
+  }
+
+  function applyI18n() {
+    document.title = fmt('settings.title');
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      el.textContent = fmt(el.getAttribute('data-i18n'));
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+      el.placeholder = fmt(el.getAttribute('data-i18n-placeholder'));
+    });
+  }
+
+  function setStatus(msg, cls) {
+    status.textContent = msg || '';
+    status.className = 'status ' + (cls || '');
+  }
+
+  function readForm() {
+    const cfg = {};
+    for (const id of textIds) cfg[id] = document.getElementById(id).value.trim();
+    for (const id of numericIds) cfg[id] = Number(document.getElementById(id).value);
+    for (const id of boolIds) cfg[id] = document.getElementById(id).checked;
+    cfg.units = document.querySelector('input[name=units]:checked')?.value || 'mg/dL';
+    cfg.language = languageSelect.value;
+    return cfg;
+  }
+
+  async function loadConfigIntoForm() {
+    const cfg = await window.api.getConfig();
+    for (const id of textIds) {
+      const el = document.getElementById(id);
+      if (cfg[id] !== undefined && cfg[id] !== null) el.value = cfg[id];
+    }
+    for (const id of numericIds) {
+      const el = document.getElementById(id);
+      if (cfg[id] !== undefined && cfg[id] !== null) el.value = cfg[id];
+    }
+    for (const id of boolIds) {
+      const el = document.getElementById(id);
+      if (cfg[id] !== undefined) el.checked = !!cfg[id];
+    }
+    const unitsRadio = document.querySelector(`input[name=units][value="${cfg.units}"]`);
+    if (unitsRadio) unitsRadio.checked = true;
+    languageSelect.value = cfg.language || 'en';
+  }
+
+  languageSelect.addEventListener('change', async () => {
+    await window.api.setLanguage(languageSelect.value);
+  });
+
+  document.getElementById('testBtn').addEventListener('click', async () => {
+    setStatus(fmt('settings.testing'), '');
+    const cfg = readForm();
+    const r = await window.api.testConfig(cfg);
+    if (r.ok) {
+      setStatus(fmt('settings.testOk', { sgv: r.sample.sgv, direction: r.sample.direction }), 'ok');
+    } else {
+      setStatus(fmt('settings.testFail', { error: r.error }), 'err');
+    }
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const cfg = readForm();
+    const r = await window.api.testConfig(cfg);
+    if (!r.ok) {
+      setStatus(fmt('settings.saveFail', { error: r.error }), 'err');
+      return;
+    }
+    const current = await window.api.getConfig();
+    await window.api.saveConfig({ ...current, ...cfg });
+    setStatus(fmt('settings.saved'), 'ok');
+    setTimeout(() => window.close(), 500);
+  });
+
+  window.api.onLanguageChanged((data) => {
+    bundle = data.bundle;
+    currentLang = data.lang;
+    languageSelect.value = data.lang;
+    applyI18n();
+  });
+
+  (async () => {
+    const i = await window.api.getI18n();
+    bundle = i.bundle;
+    currentLang = i.lang;
+    applyI18n();
+    await loadConfigIntoForm();
+  })();
+</script>
+</body>
+</html>

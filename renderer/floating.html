@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Glucose</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: transparent;
+    height: 100%; width: 100%;
+    overflow: hidden;
+    user-select: none;
+    cursor: move;
+    -webkit-app-region: drag;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Microsoft JhengHei", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  .wrap {
+    text-align: right;
+    padding: 6px 10px;
+    text-shadow: 0 0 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9);
+    color: #fff;
+    background: rgba(0,0,0,0.35);
+    border-radius: 8px;
+    margin: 4px;
+    transition: background 0.3s;
+  }
+  .wrap.has-data { background: rgba(0,0,0,0.18); }
+  .wrap.no-config {
+    background: rgba(60,60,60,0.55);
+    text-align: center;
+    font-size: 12px;
+  }
+  .value-line {
+    font-weight: 700;
+    font-size: 32px;
+    line-height: 1;
+  }
+  .arrow { margin-left: 4px; }
+  .meta { font-size: 12px; opacity: 0.9; margin-top: 2px; line-height: 1.2; }
+  .in-range    .value-line { color: #6ee36b; }
+  .high        .value-line { color: #f5d442; }
+  .urgent-high .value-line { color: #ff5252; }
+  .low         .value-line { color: #f5d442; }
+  .urgent-low  .value-line { color: #ff5252; }
+  .stale-warn  .value-line { color: #bbbbbb; }
+  .stale-urgent .value-line { color: #888888; }
+  .error       .value-line { color: #ff7070; font-size: 16px; }
+  .clickable { -webkit-app-region: no-drag; cursor: pointer; }
+  .menu-btn {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 14px; height: 14px;
+    background: rgba(255,255,255,0.0);
+    color: rgba(255,255,255,0.5);
+    font-size: 10px;
+    text-align: center;
+    line-height: 14px;
+    border-radius: 3px;
+    -webkit-app-region: no-drag;
+    cursor: pointer;
+  }
+  .menu-btn:hover { background: rgba(255,255,255,0.2); color: #fff; }
+</style>
+</head>
+<body>
+  <div id="menuBtn" class="menu-btn" title="Settings">⚙</div>
+  <div id="container" class="wrap in-range">
+    <div class="value-line">
+      <span id="value">---</span><span id="arrow" class="arrow"></span>
+    </div>
+    <div class="meta">
+      <div><span id="delta"></span> <span id="units"></span></div>
+      <div id="age">loading...</div>
+    </div>
+  </div>
+<script>
+  const container = document.getElementById('container');
+  const valueEl = document.getElementById('value');
+  const arrowEl = document.getElementById('arrow');
+  const deltaEl = document.getElementById('delta');
+  const unitsEl = document.getElementById('units');
+  const ageEl = document.getElementById('age');
+  const menuBtn = document.getElementById('menuBtn');
+
+  let bundle = {};
+
+  function fmt(key, params) {
+    let s = bundle[key] || key;
+    if (params) s = s.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? params[k] : `{${k}}`));
+    return s;
+  }
+
+  function applyStaticI18n() {
+    menuBtn.title = fmt('floating.settingsTooltip');
+    if (!container.dataset.hasData) ageEl.textContent = fmt('floating.loading');
+  }
+
+  function ageText(n) {
+    if (n <= 0) return fmt('floating.justNow');
+    if (n === 1) return fmt('floating.minuteAgo', { n });
+    return fmt('floating.minutesAgo', { n });
+  }
+
+  menuBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.api.openSettings();
+  });
+
+  function setStatus(cls) {
+    container.className = 'wrap ' + cls;
+  }
+
+  window.api.onGlucoseUpdate((d) => {
+    container.dataset.hasData = '1';
+    valueEl.style.fontSize = (d.fontSize || 32) + 'px';
+    valueEl.textContent = d.value;
+    arrowEl.textContent = d.arrow || '';
+    deltaEl.textContent = d.delta;
+    unitsEl.textContent = d.units;
+    ageEl.textContent = ageText(d.ageMin);
+    container.className = 'wrap has-data ' + d.status;
+  });
+
+  window.api.onGlucoseError((d) => {
+    valueEl.style.fontSize = '16px';
+    valueEl.textContent = fmt('floating.error');
+    arrowEl.textContent = '';
+    deltaEl.textContent = '';
+    unitsEl.textContent = '';
+    ageEl.textContent = (d.message || '').slice(0, 40);
+    container.className = 'wrap error';
+  });
+
+  window.api.onLanguageChanged((data) => {
+    bundle = data.bundle;
+    applyStaticI18n();
+  });
+
+  (async () => {
+    const i = await window.api.getI18n();
+    bundle = i.bundle;
+    applyStaticI18n();
+  })();
+</script>
+</body>
+</html>
