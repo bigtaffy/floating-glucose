@@ -1,0 +1,107 @@
+name: 🐛 Bug 回報 / Bug report
+description: 回報 App 異常、當機、顯示錯誤 / Report a crash, error, or wrong behavior
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感謝你回報問題！請盡量填完下列欄位，方便我們重現。
+        Thanks for reporting! Please fill in the fields below so we can reproduce.
+
+        ⚠️ **不要在 Issue 中貼出你的 Nightscout 完整網址或密碼**。
+        Do NOT paste your full Nightscout URL or password in this issue.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: 發生什麼事 / What happened
+      description: 越具體越好，包含你按了什麼、預期看到什麼、實際看到什麼
+      placeholder: |
+        例：打開設定畫面後按「Test connection」，畫面凍住超過 30 秒沒反應。
+        Example: After opening Settings and clicking "Test connection", the window froze for 30+ seconds.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: 重現步驟 / Steps to reproduce
+      placeholder: |
+        1.
+        2.
+        3.
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: 作業系統 / Operating system
+      options:
+        - macOS Sequoia (15)
+        - macOS Sonoma (14)
+        - macOS Ventura (13)
+        - macOS Monterey (12)
+        - macOS Big Sur (11)
+        - Windows 11
+        - Windows 10
+        - Other (請在「其他資訊」說明)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: arch
+    attributes:
+      label: CPU 架構 / CPU architecture（macOS 必填）
+      options:
+        - Apple Silicon (M1/M2/M3/M4)
+        - Intel
+        - Windows x64
+        - 不確定 / Not sure
+
+  - type: input
+    id: app-version
+    attributes:
+      label: App 版本 / App version
+      placeholder: "v1.0.0（從設定畫面底部或安裝程式檔名查看）"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ns-provider
+    attributes:
+      label: Nightscout 來源 / Nightscout host
+      options:
+        - T1NS（台灣社群託管）
+        - 自架 Heroku
+        - 自架 Northflank / Railway / Fly.io
+        - 其他自架方案
+        - 不確定
+    validations:
+      required: true
+
+  - type: dropdown
+    id: cgm
+    attributes:
+      label: CGM 來源 / CGM upstream
+      options:
+        - 歐態 CGM
+        - Dexcom + xDrip+
+        - Libre + xDrip+
+        - Libre + Diabox
+        - Medtronic 700-series
+        - 其他
+        - 不確定
+
+  - type: textarea
+    id: console
+    attributes:
+      label: 終端機輸出（如果你會用） / Console output (optional)
+      description: |
+        macOS 可從 Terminal 跑：`/Applications/FloatingGlucose.app/Contents/MacOS/FloatingGlucose`
+        把噴出來的紅字貼上來。
+      render: shell
+
+  - type: textarea
+    id: extra
+    attributes:
+      label: 其他資訊 / Anything else
+      placeholder: 螢幕截圖、影片連結等都可以貼這裡

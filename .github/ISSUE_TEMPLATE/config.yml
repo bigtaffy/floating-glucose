@@ -1,0 +1,22 @@
+blank_issues_enabled: false
+contact_links:
+  - name: ⚠️ 醫療緊急狀況 / Medical emergency
+    url: https://nightscout.github.io/
+    about: |
+      本軟體不能用於診斷或治療。緊急高/低血糖請依你的醫師建議處理，
+      或撥打 119（台灣）/ 911（美國）/ 當地急救電話。
+
+      This software is NOT a medical device. For glucose-related emergencies,
+      follow your healthcare provider's guidance or call your local emergency number.
+
+  - name: 💬 Nightscout 設定問題 / Nightscout setup questions
+    url: https://nightscout.github.io/
+    about: |
+      Nightscout 站台本身的設定、上傳、帳號問題不屬於本專案。
+      請到 Nightscout 官網或社群提問。
+
+  - name: ❓ 使用問題 / Usage questions
+    url: https://github.com/bigtaffy/floating-glucose/discussions
+    about: |
+      不是 bug 也不是新功能建議的一般問題，請使用 Discussions。
+      (Discussions 需手動於 GitHub 設定中開啟。)
