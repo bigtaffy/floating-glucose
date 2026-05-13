@@ -1,6 +1,6 @@
 {
   "name": "floating-glucose",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Cross-platform floating glucose clock for Nightscout",
   "main": "main.js",
   "author": "bigtaffy",
@@ -66,7 +66,11 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true
+      "createDesktopShortcut": true,
+      "include": "build/installer.nsh",
+      "deleteAppDataOnUninstall": false,
+      "differentialPackage": true,
+      "allowElevation": true
     },
     "publish": {
       "provider": "github",

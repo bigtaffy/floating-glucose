@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-13
+
+### Fixed
+
+- **Windows 安裝新版時被舊版 uninstaller 整合性檢查擋下** — 部分使用者裝過 v1.0.0（其 uninstaller 已被 Windows Defender 修改而損壞），直接執行新版安裝程式時會跳 `Installer integrity check has failed` 然後中止。新增自訂 NSIS hook（`build/installer.nsh`），在新安裝開始前先：
+  - 強制結束執行中的 `FloatingGlucose.exe`
+  - 主動刪除舊的 `Uninstall FloatingGlucose.exe`（已知可能損壞）
+  - 讓 NSIS 直接覆蓋安裝，跳過會失敗的整合性檢查步驟
+
+  **這代表 v1.0.0 / v1.0.1 / v1.0.2 / v1.0.3 / v1.0.4 / v1.1.0 用戶現在可以直接下載 v1.1.1 雙擊安裝，不用先手動移除舊版**。
+
+### Changed
+
+- NSIS 設定加入 `differentialPackage: true`（節省自動更新流量）與 `deleteAppDataOnUninstall: false`（明確保留使用者 NS 設定，移除 App 不會刪除你的設定檔）
+
 ## [1.1.0] - 2026-05-13
 
 ### Added — Tier 1 三大功能
@@ -115,7 +130,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.1.0...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.1.1...HEAD
+[1.1.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.1.1
 [1.1.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.1.0
 [1.0.4]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.4
 [1.0.3]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.3
