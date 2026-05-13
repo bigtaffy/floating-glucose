@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.2] - 2026-05-13
+
+### Fixed
+
+- **浮動視窗大小不會跟著字體放大** — 之前固定 200×90，字體設到 50 以上副資訊（`+7 mg/dL`、`1 分鐘前`）被遮住。現在視窗會依照實際渲染內容自動撐開，右邊緣保持原位（拖到角落不會跑掉）
+- **小字隨大字消失** — 同上根本原因解決
+
+### Changed
+
+- 浮動視窗背景圓角 8 → 10px、padding 加寬，視覺更舒適
+- 加 `min-width: 120px` 避免極小數值時視窗縮太小不好點
+
 ## [1.0.1] - 2026-05-13
 
 ### Added
@@ -46,6 +58,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.1...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.2...HEAD
+[1.0.2]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.2
 [1.0.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.1
 [1.0.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.0

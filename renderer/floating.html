@@ -7,22 +7,25 @@
   html, body {
     margin: 0; padding: 0;
     background: transparent;
-    height: 100%; width: 100%;
     overflow: hidden;
     user-select: none;
     cursor: move;
     -webkit-app-region: drag;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Microsoft JhengHei", "Microsoft YaHei", Roboto, "Helvetica Neue", Arial, sans-serif;
   }
+  body { display: inline-block; }
   .wrap {
+    display: inline-block;
     text-align: right;
-    padding: 6px 10px;
+    padding: 8px 14px;
     text-shadow: 0 0 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9);
     color: #fff;
     background: rgba(0,0,0,0.35);
-    border-radius: 8px;
+    border-radius: 10px;
     margin: 4px;
+    min-width: 120px;
     transition: background 0.3s;
+    white-space: nowrap;
   }
   .wrap.has-data { background: rgba(0,0,0,0.18); }
   .wrap.no-config {
@@ -136,10 +139,24 @@
     applyStaticI18n();
   });
 
+  // Notify main process of rendered content size so window resizes to fit.
+  let lastReported = { w: 0, h: 0 };
+  function reportSize() {
+    const w = container.offsetWidth + 8;
+    const h = container.offsetHeight + 8;
+    if (Math.abs(w - lastReported.w) < 4 && Math.abs(h - lastReported.h) < 4) return;
+    lastReported = { w, h };
+    window.api.reportContentSize({ width: w, height: h });
+  }
+  const ro = new ResizeObserver(() => reportSize());
+  ro.observe(container);
+  window.addEventListener('load', reportSize);
+
   (async () => {
     const i = await window.api.getI18n();
     bundle = i.bundle;
     applyStaticI18n();
+    reportSize();
   })();
 </script>
 </body>

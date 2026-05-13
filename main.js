@@ -417,6 +417,17 @@ ipcMain.handle('config:test', async (_e, cfg) => {
 });
 ipcMain.on('open-settings', openSettings);
 ipcMain.on('quit-app', () => app.quit());
+ipcMain.on('floating:report-size', (_e, size) => {
+  if (!floatingWindow || floatingWindow.isDestroyed()) return;
+  if (!size || !size.width || !size.height) return;
+  const targetW = Math.max(140, Math.min(800, Math.ceil(size.width)));
+  const targetH = Math.max(60, Math.min(400, Math.ceil(size.height)));
+  const bounds = floatingWindow.getBounds();
+  if (Math.abs(bounds.width - targetW) < 4 && Math.abs(bounds.height - targetH) < 4) return;
+  // Anchor the right edge so widget stays put when growing/shrinking.
+  const newX = bounds.x + (bounds.width - targetW);
+  floatingWindow.setBounds({ x: newX, y: bounds.y, width: targetW, height: targetH }, false);
+});
 
 app.whenReady().then(() => {
   buildTray();

@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('api', {
   onGlucoseError: (cb) => ipcRenderer.on('glucose-error', (_e, data) => cb(data)),
   getI18n: () => ipcRenderer.invoke('i18n:get'),
   setLanguage: (lang) => ipcRenderer.invoke('i18n:setLanguage', lang),
-  onLanguageChanged: (cb) => ipcRenderer.on('language-changed', (_e, data) => cb(data))
+  onLanguageChanged: (cb) => ipcRenderer.on('language-changed', (_e, data) => cb(data)),
+  reportContentSize: (size) => ipcRenderer.send('floating:report-size', size)
 });
