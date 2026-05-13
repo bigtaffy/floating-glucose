@@ -45,6 +45,7 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.exe
+            dist/*.zip
             dist/*.blockmap
             dist/latest*.yml
           if-no-files-found: ignore
@@ -74,6 +75,7 @@ jobs:
           files: |
             artifacts/**/*.dmg
             artifacts/**/*.exe
+            artifacts/**/*.zip
             artifacts/**/*.blockmap
             artifacts/**/latest*.yml
           generate_release_notes: true

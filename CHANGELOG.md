@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-05-13
+
+### Fixed
+
+- **macOS 自動更新失敗** — 錯誤訊息「無法檢查更新：ZIP file not provided」。原因是 electron-updater 在 macOS 上需要 `.zip` 檔做 in-place 更新（無法用 `.dmg`），而我們之前只打包 `.dmg`。新增 `zip` 為 macOS build target，CI 一併上傳到 Release，latest-mac.yml 從此包含 `.zip` 連結，自動更新可正常運作
+
+### Notes
+
+> v1.0.3 macOS 使用者**這次需要手動下載 v1.0.4 一次**（因為 v1.0.3 release 沒有 zip）。從 v1.0.4 起 macOS 自動更新將正常運作。
+> Windows 使用者不受影響，因為 Windows 用的是 NSIS installer 不需要 zip。
+
 ## [1.0.3] - 2026-05-13
 
 ### Changed
@@ -71,7 +82,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.3...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.4
 [1.0.3]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.3
 [1.0.2]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.2
 [1.0.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.1
