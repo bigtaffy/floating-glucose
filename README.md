@@ -91,10 +91,26 @@ Nightscout 是免費開源的雲端血糖紀錄系統。常見託管方式：
    - **Intel Mac**（2020 年以前的 Mac） → 選 `FloatingGlucose-x.x.x.dmg`
    - 不確定自己是哪一種？點左上角 蘋果圖示 → 「關於這台 Mac」，看「晶片」欄位。寫 Apple M 開頭就選 arm64。
 2. 雙擊 `.dmg`，把 App 圖示拖到「應用程式」資料夾
-3. **第一次打開** Launchpad 找到 FloatingGlucose，會跳出：
+
+3. 第一次打開可能會遇到**兩種**警告，依出現的訊息對應：
+
+   **狀況 A — 跳「無法打開」**：
    > 無法打開「FloatingGlucose」，因為 Apple 無法檢查其中是否包含惡意軟體
-4. 不要直接雙擊！**改用：** 在「應用程式」資料夾找到 FloatingGlucose → **右鍵點它 → 開啟 → 仍要開啟**
-5. 之後就可以正常雙擊開啟了
+
+   解法：在「應用程式」資料夾**右鍵點 FloatingGlucose → 開啟 → 仍要開啟**
+
+   **狀況 B — 跳「已損毀」**：
+   > 「FloatingGlucose」已損毀且無法打開。您應該將它移到「垃圾桶」。
+
+   檔案沒壞，是 macOS 看到「未簽章 App 從網路下載」就會這樣警告。打開 Terminal（`Cmd + Space` 打「終端機」）貼這行 Enter：
+
+   ```bash
+   xattr -cr /Applications/FloatingGlucose.app
+   ```
+
+   跑完再雙擊就能正常開啟，且以後不會再跳這個警告。
+
+4. 之後就可以正常雙擊開啟了
 
 ### Windows（10 / 11）
 
