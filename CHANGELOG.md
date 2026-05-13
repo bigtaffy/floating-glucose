@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.1] - 2026-05-13
+
+### Added
+
+- **自動更新** — App 啟動 30 秒後自動檢查 GitHub Release 上的新版，並每 6 小時複查一次。新版自動背景下載，下載完成後彈出對話框詢問「立即重啟」或「稍後再說」
+- **托盤新增「檢查程式更新」選項** — 手動觸發檢查並顯示結果
+- **托盤新增版本顯示** — 選單列出當前版本（v1.0.1）
+- **更新流程多國語言** — 4 種語言（繁中／簡中／英文／日文）的更新對話框與通知文案
+- **package.json metadata** — homepage、repository 欄位，appId 與 publish 設定
+
+### Notes
+
+> v1.0.0 → v1.0.1 是首次帶有自動更新功能的版本，v1.0.0 已安裝的使用者**需手動下載 v1.0.1 一次**，之後 v1.0.1 → v1.0.2 起就會自動更新。
+
 ## [1.0.0] - 2026-05-13
 
 ### Added — 第一個正式版
@@ -32,5 +46,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.1...HEAD
+[1.0.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.1
 [1.0.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.0

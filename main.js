@@ -1,9 +1,10 @@
-const { app, BrowserWindow, ipcMain, Menu, Tray, nativeImage, screen } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, Notification, dialog, nativeImage, screen, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const https = require('https');
 const http = require('http');
 const crypto = require('crypto');
+const { autoUpdater } = require('electron-updater');
 const i18n = require('./i18n');
 
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
@@ -287,6 +288,9 @@ function buildTray() {
     const menu = Menu.buildFromTemplate([
       { label: i18n.t(lang, 'tray.refresh'), click: refresh },
       { label: i18n.t(lang, 'tray.settings'), click: openSettings },
+      { label: i18n.t(lang, 'tray.checkUpdate'), click: () => checkForUpdates(false) },
+      { type: 'separator' },
+      { label: `v${app.getVersion()}`, enabled: false },
       { type: 'separator' },
       { label: i18n.t(lang, 'tray.quit'), click: () => { app.quit(); } }
     ]);
@@ -295,6 +299,78 @@ function buildTray() {
   } catch (e) {
     console.error('Failed to build tray:', e);
   }
+}
+
+let updateCheckSilent = true;
+function checkForUpdates(silent) {
+  if (!app.isPackaged) {
+    if (!silent) {
+      dialog.showMessageBox({
+        type: 'info',
+        message: 'Update check is disabled in development mode.'
+      });
+    }
+    return;
+  }
+  updateCheckSilent = !!silent;
+  autoUpdater.checkForUpdates().catch((e) => {
+    console.error('Update check failed:', e);
+  });
+}
+
+function setupAutoUpdater() {
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = true;
+
+  autoUpdater.on('error', (err) => {
+    console.error('autoUpdater error:', err);
+    if (!updateCheckSilent) {
+      const lang = loadConfig().language;
+      dialog.showErrorBox(
+        i18n.t(lang, 'update.errorTitle'),
+        i18n.t(lang, 'update.errorBody', { error: err.message || String(err) })
+      );
+    }
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    if (!updateCheckSilent) {
+      const lang = loadConfig().language;
+      dialog.showMessageBox({
+        type: 'info',
+        title: i18n.t(lang, 'update.upToDateTitle'),
+        message: i18n.t(lang, 'update.upToDateBody', { version: app.getVersion() })
+      });
+    }
+  });
+
+  autoUpdater.on('update-available', (info) => {
+    if (!updateCheckSilent) {
+      const lang = loadConfig().language;
+      new Notification({
+        title: i18n.t(lang, 'update.downloadingTitle'),
+        body: i18n.t(lang, 'update.downloadingBody', { version: info.version })
+      }).show();
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    const lang = loadConfig().language;
+    const result = dialog.showMessageBoxSync({
+      type: 'info',
+      buttons: [
+        i18n.t(lang, 'update.restartNow'),
+        i18n.t(lang, 'update.restartLater')
+      ],
+      defaultId: 0,
+      cancelId: 1,
+      title: i18n.t(lang, 'update.readyTitle'),
+      message: i18n.t(lang, 'update.readyBody', { version: info.version })
+    });
+    if (result === 0) {
+      setImmediate(() => autoUpdater.quitAndInstall());
+    }
+  });
 }
 
 function broadcastLanguage() {
@@ -345,8 +421,12 @@ ipcMain.on('quit-app', () => app.quit());
 app.whenReady().then(() => {
   buildTray();
   applyVisibility();
+  setupAutoUpdater();
   const cfg = loadConfig();
   if (!cfg.nsUrl) openSettings();
+  // First check 30s after launch (let app settle), then every 6 hours.
+  setTimeout(() => checkForUpdates(true), 30 * 1000);
+  setInterval(() => checkForUpdates(true), 6 * 60 * 60 * 1000);
 });
 
 app.on('activate', () => {

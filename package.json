@@ -1,10 +1,15 @@
 {
   "name": "floating-glucose",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Cross-platform floating glucose clock for Nightscout",
   "main": "main.js",
-  "author": "You",
+  "author": "bigtaffy",
   "license": "MIT",
+  "homepage": "https://github.com/bigtaffy/floating-glucose",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bigtaffy/floating-glucose.git"
+  },
   "scripts": {
     "start": "electron .",
     "dist": "electron-builder",
@@ -29,14 +34,25 @@
     ],
     "mac": {
       "target": [
-        { "target": "dmg", "arch": ["x64", "arm64"] }
+        {
+          "target": "dmg",
+          "arch": [
+            "x64",
+            "arm64"
+          ]
+        }
       ],
       "category": "public.app-category.medical",
       "icon": "build/icon.icns"
     },
     "win": {
       "target": [
-        { "target": "nsis", "arch": ["x64"] }
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
       ],
       "icon": "build/icon.png"
     },
@@ -44,6 +60,14 @@
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "bigtaffy",
+      "repo": "floating-glucose"
     }
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.3"
   }
 }
