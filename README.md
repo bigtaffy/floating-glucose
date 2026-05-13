@@ -76,7 +76,7 @@
 ### 沒有 NS 站台怎麼辦？
 
 Nightscout 是免費開源的雲端血糖紀錄系統。常見託管方式：
-- **T1NS** — 台灣社群提供（付費月租，但很穩定、中文支援）
+- **T1NS** — 台灣社群提供（中文支援）
 - 自行用 Heroku / Northflank / Railway / Fly.io 等平台部署
 - 詳見 [Nightscout 官網](https://nightscout.github.io/)
 
