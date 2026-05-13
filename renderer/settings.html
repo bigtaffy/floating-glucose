@@ -124,6 +124,14 @@
     <label><input type="checkbox" id="hideDock" /> <span data-i18n="settings.hideDock">Hide Dock icon (macOS only)</span></label>
   </fieldset>
 
+  <fieldset>
+    <legend data-i18n="settings.alertsSection">Alerts</legend>
+    <label><input type="checkbox" id="enableSoundAlarms" /> <span data-i18n="settings.enableSoundAlarms">Play sound when urgent high/low</span></label>
+    <label><input type="checkbox" id="enableStaleNotification" /> <span data-i18n="settings.enableStaleNotification">System notification when CGM disconnects</span></label>
+    <label data-i18n="settings.trendHours">Trend chart hours</label>
+    <input type="number" id="trendHours" min="1" max="24" />
+  </fieldset>
+
   <div class="status" id="status"></div>
   <div class="actions">
     <button id="testBtn" data-i18n="settings.testBtn">Test connection</button>
@@ -131,9 +139,9 @@
   </div>
 
 <script>
-  const numericIds = ['urgentHigh','high','low','urgentLow','staleWarn','staleUrgent','fontSize','refreshSec'];
+  const numericIds = ['urgentHigh','high','low','urgentLow','staleWarn','staleUrgent','fontSize','refreshSec','trendHours'];
   const textIds = ['nsUrl','token'];
-  const boolIds = ['showFloating','showInMenuBar','hideDock'];
+  const boolIds = ['showFloating','showInMenuBar','hideDock','enableSoundAlarms','enableStaleNotification'];
   const status = document.getElementById('status');
   const languageSelect = document.getElementById('language');
 

@@ -1,9 +1,31 @@
 {
   "app.name": "浮动血糖钟",
   "tray.refresh": "立即刷新",
+  "tray.trend": "显示趋势图...",
   "tray.settings": "设置...",
   "tray.checkUpdate": "检查程序更新...",
   "tray.quit": "退出",
+
+  "alert.urgentHighTitle": "紧急高血糖",
+  "alert.urgentHighBody": "当前 {value} {units}，请按医嘱处理。",
+  "alert.urgentLowTitle": "紧急低血糖",
+  "alert.urgentLowBody": "当前 {value} {units}，请立即补充快速碳水。",
+  "alert.cgmDisconnectedTitle": "CGM 数据失联",
+  "alert.cgmDisconnectedBody": "已 {minutes} 分钟没有新数据，请检查 CGM 与手机 App。",
+
+  "trend.title": "血糖趋势图",
+  "trend.noData": "选定区间没有血糖数据。",
+  "trend.tir": "范围内",
+  "trend.avg": "平均",
+  "trend.lo": "最低",
+  "trend.hi": "最高",
+  "trend.rangeLabel": "过去 {hours} 小时 · {from} → {to}",
+  "trend.updatedAt": "更新于 {time}",
+
+  "settings.alertsSection": "报警与通知",
+  "settings.enableSoundAlarms": "紧急高/低血糖时播放报警音",
+  "settings.enableStaleNotification": "紧急血糖 / CGM 失联时弹出系统通知",
+  "settings.trendHours": "趋势图时间范围（小时，1–24）",
 
   "update.downloadingTitle": "有新版本",
   "update.downloadingBody": "版本 {version} 正在后台下载中。",

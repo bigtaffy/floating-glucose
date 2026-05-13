@@ -1,9 +1,31 @@
 {
   "app.name": "Floating Glucose",
   "tray.refresh": "Refresh now",
+  "tray.trend": "Show trend chart...",
   "tray.settings": "Settings...",
   "tray.checkUpdate": "Check for updates...",
   "tray.quit": "Quit",
+
+  "alert.urgentHighTitle": "Urgent HIGH glucose",
+  "alert.urgentHighBody": "Reading: {value} {units} — consider corrective action.",
+  "alert.urgentLowTitle": "Urgent LOW glucose",
+  "alert.urgentLowBody": "Reading: {value} {units} — take fast-acting carbs.",
+  "alert.cgmDisconnectedTitle": "CGM data is stale",
+  "alert.cgmDisconnectedBody": "No new reading for {minutes} minutes. Check your CGM and phone app.",
+
+  "trend.title": "Glucose trend",
+  "trend.noData": "No glucose data in the selected window.",
+  "trend.tir": "TIR",
+  "trend.avg": "Avg",
+  "trend.lo": "Lo",
+  "trend.hi": "Hi",
+  "trend.rangeLabel": "Last {hours}h · {from} → {to}",
+  "trend.updatedAt": "Updated {time}",
+
+  "settings.alertsSection": "Alerts",
+  "settings.enableSoundAlarms": "Play sound when urgent high/low",
+  "settings.enableStaleNotification": "System notification on urgent / CGM disconnect",
+  "settings.trendHours": "Trend chart hours (1–24)",
 
   "update.downloadingTitle": "Update available",
   "update.downloadingBody": "Version {version} is downloading in the background.",

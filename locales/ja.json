@@ -1,9 +1,31 @@
 {
   "app.name": "フローティング血糖計",
   "tray.refresh": "今すぐ更新",
+  "tray.trend": "トレンドグラフを表示...",
   "tray.settings": "設定...",
   "tray.checkUpdate": "アップデートを確認...",
   "tray.quit": "終了",
+
+  "alert.urgentHighTitle": "緊急高血糖",
+  "alert.urgentHighBody": "現在 {value} {units}、医師の指示に従ってください。",
+  "alert.urgentLowTitle": "緊急低血糖",
+  "alert.urgentLowBody": "現在 {value} {units}、速やかに速効性糖質を補給してください。",
+  "alert.cgmDisconnectedTitle": "CGM データが切断されました",
+  "alert.cgmDisconnectedBody": "{minutes} 分間新しい値がありません。CGM とスマホアプリを確認してください。",
+
+  "trend.title": "血糖トレンド",
+  "trend.noData": "選択した期間に血糖データがありません。",
+  "trend.tir": "範囲内",
+  "trend.avg": "平均",
+  "trend.lo": "最低",
+  "trend.hi": "最高",
+  "trend.rangeLabel": "過去 {hours} 時間 · {from} → {to}",
+  "trend.updatedAt": "更新 {time}",
+
+  "settings.alertsSection": "アラートと通知",
+  "settings.enableSoundAlarms": "緊急高/低血糖時にアラーム音を鳴らす",
+  "settings.enableStaleNotification": "緊急血糖 / CGM 切断時にシステム通知",
+  "settings.trendHours": "トレンドグラフの時間範囲（1–24 時間）",
 
   "update.downloadingTitle": "新しいバージョンがあります",
   "update.downloadingBody": "バージョン {version} をバックグラウンドでダウンロード中です。",

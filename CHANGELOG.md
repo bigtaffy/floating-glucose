@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-13
+
+### Added — Tier 1 三大功能
+
+- **🔔 聲音警報** — 進入緊急高/低血糖時自動播放警報音
+  - urgent-low：4 聲較低頻 440 Hz（更急促）
+  - urgent-high：3 聲較高頻 880 Hz
+  - 用 Web Audio API 即時合成，無需音檔；只在「進入」緊急狀態時觸發一次，不會重複噪音轟炸
+  - 設定畫面可開關（預設開）
+
+- **📈 趨勢圖視窗** — 點擊浮動視窗的血糖數字 或 托盤選單「顯示趨勢圖」開啟
+  - 預設顯示過去 4 小時（可在設定改 1–24 小時）
+  - SVG 折線圖、依血糖等級著色
+  - 4 條閾值參考線（urgent-high / high / low / urgent-low）+ in-range 綠色帶
+  - 統計：TIR (Time In Range) %、平均、最高、最低
+  - 每分鐘自動刷新
+
+- **📡 CGM 斷線通知** — 資料超過設定門檻沒更新時，跳出 OS 系統通知
+  - 偵測「從正常進入失聯」的狀態轉換，不會重複轟炸
+  - 緊急高/低血糖也同步發 OS 系統通知（除聲音外的視覺提醒）
+  - 設定畫面可開關（預設開）
+
+### Changed
+
+- 托盤選單新增「顯示趨勢圖」項目
+- 浮動視窗的血糖數字現在是可點擊元素（hover 變手指游標）
+
+### Technical
+
+- `main.js`：新增 `previousStatus` 狀態追蹤、`handleStateTransition()`、`openTrend()`、`fetch-trend` IPC handler
+- `renderer/trend.html`：純 SVG 渲染，無第三方圖表庫依賴
+- 4 種語言新增 alert / trend / settings.alerts* 字串
+
 ## [1.0.4] - 2026-05-13
 
 ### Fixed
@@ -82,7 +115,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.4...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.1.0...HEAD
+[1.1.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.1.0
 [1.0.4]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.4
 [1.0.3]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.3
 [1.0.2]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.2

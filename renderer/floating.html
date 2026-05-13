@@ -55,6 +55,10 @@
   .stale-warn  .value-line { color: #bbbbbb; }
   .stale-urgent .value-line { color: #888888; }
   .error       .value-line { color: #ff7070; font-size: 16px; }
+  .value-line {
+    -webkit-app-region: no-drag;
+    cursor: pointer;
+  }
   .clickable { -webkit-app-region: no-drag; cursor: pointer; }
   .menu-btn {
     position: absolute;
@@ -114,6 +118,43 @@
   menuBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     window.api.openSettings();
+  });
+
+  // Click on the glucose value opens the trend window
+  document.querySelector('.value-line').addEventListener('click', (e) => {
+    e.stopPropagation();
+    window.api.openTrend();
+  });
+
+  // Sound alarm: 3 short beeps via Web Audio API. Frequency differs by status
+  // (urgent-low = lower pitch / more "alarming", urgent-high = higher pitch).
+  let audioCtx = null;
+  function playBeeps(freq, count = 3, duration = 0.25, gap = 0.15) {
+    try {
+      audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      for (let i = 0; i < count; i++) {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        const start = now + i * (duration + gap);
+        gain.gain.setValueAtTime(0.001, start);
+        gain.gain.exponentialRampToValueAtTime(0.35, start + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.001, start + duration);
+        osc.start(start);
+        osc.stop(start + duration + 0.05);
+      }
+    } catch (e) {
+      console.error('Beep failed:', e);
+    }
+  }
+  window.api.onPlayAlarm((data) => {
+    if (data.status === 'urgent-low') playBeeps(440, 4, 0.2, 0.1);
+    else playBeeps(880, 3, 0.18, 0.12);
   });
 
   function setStatus(cls) {

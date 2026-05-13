@@ -25,13 +25,18 @@ const DEFAULT_CONFIG = {
   language: null,
   showFloating: true,
   showInMenuBar: true,
-  hideDock: false
+  hideDock: false,
+  enableSoundAlarms: true,
+  enableStaleNotification: true,
+  trendHours: 4
 };
 
 let floatingWindow = null;
 let settingsWindow = null;
+let trendWindow = null;
 let tray = null;
 let refreshTimer = null;
+let previousStatus = null;
 
 function loadConfig() {
   let cfg = { ...DEFAULT_CONFIG };
@@ -118,6 +123,49 @@ function updateTrayTitle(text) {
   try { tray.setTitle(text || ''); } catch (_) {}
 }
 
+function handleStateTransition(newStatus, ageMin, sgv, cfg) {
+  const lang = cfg.language;
+  const wasUrgent = previousStatus === 'urgent-high' || previousStatus === 'urgent-low';
+  const wasStale = previousStatus === 'stale-warn' || previousStatus === 'stale-urgent';
+  const isUrgent = newStatus === 'urgent-high' || newStatus === 'urgent-low';
+  const isStale = newStatus === 'stale-warn' || newStatus === 'stale-urgent';
+
+  // Sound alarm: entered urgent from non-urgent state
+  if (cfg.enableSoundAlarms !== false && isUrgent && !wasUrgent) {
+    if (floatingWindow && !floatingWindow.isDestroyed()) {
+      floatingWindow.webContents.send('play-alarm', { status: newStatus });
+    }
+  }
+
+  // CGM disconnect notification: entered stale state from fresh data
+  if (cfg.enableStaleNotification !== false && isStale && !wasStale) {
+    try {
+      new Notification({
+        title: i18n.t(lang, 'alert.cgmDisconnectedTitle'),
+        body: i18n.t(lang, 'alert.cgmDisconnectedBody', { minutes: ageMin })
+      }).show();
+    } catch (e) {
+      console.error('Notification failed:', e);
+    }
+  }
+
+  // Urgent-state system notification (in addition to sound) for OS-level alert
+  if (cfg.enableStaleNotification !== false && isUrgent && !wasUrgent) {
+    const key = newStatus === 'urgent-low' ? 'alert.urgentLowBody' : 'alert.urgentHighBody';
+    const titleKey = newStatus === 'urgent-low' ? 'alert.urgentLowTitle' : 'alert.urgentHighTitle';
+    try {
+      new Notification({
+        title: i18n.t(lang, titleKey),
+        body: i18n.t(lang, key, { value: sgv, units: cfg.units })
+      }).show();
+    } catch (e) {
+      console.error('Notification failed:', e);
+    }
+  }
+
+  previousStatus = newStatus;
+}
+
 async function refresh() {
   const cfg = loadConfig();
   try {
@@ -130,13 +178,14 @@ async function refresh() {
     const display = cfg.units === 'mmol/L' ? (sgv / 18).toFixed(1) : String(sgv);
     const deltaDisplay = cfg.units === 'mmol/L' ? (delta / 18).toFixed(1) : String(delta);
     const arrow = DIRECTION_ARROW[latest.direction] || '';
+    const status = classify(sgv, ageMin, cfg);
     const payload = {
       value: display,
       arrow,
       delta: (delta >= 0 ? '+' : '') + deltaDisplay,
       ageMin,
       units: cfg.units,
-      status: classify(sgv, ageMin, cfg),
+      status,
       fontSize: cfg.fontSize
     };
     if (floatingWindow && !floatingWindow.isDestroyed()) {
@@ -147,6 +196,7 @@ async function refresh() {
     } else {
       updateTrayTitle('');
     }
+    handleStateTransition(status, ageMin, sgv, cfg);
   } catch (e) {
     if (floatingWindow && !floatingWindow.isDestroyed()) {
       floatingWindow.webContents.send('glucose-error', { message: e.message, fontSize: cfg.fontSize });
@@ -222,6 +272,35 @@ function createFloatingWindow() {
   floatingWindow.webContents.on('did-finish-load', () => scheduleRefresh());
 }
 
+function openTrend() {
+  if (trendWindow && !trendWindow.isDestroyed()) {
+    trendWindow.show();
+    trendWindow.focus();
+    return;
+  }
+  trendWindow = new BrowserWindow({
+    width: 640,
+    height: 380,
+    title: 'Glucose Trend',
+    center: true,
+    show: false,
+    minWidth: 480,
+    minHeight: 300,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false
+    }
+  });
+  trendWindow.setMenu(null);
+  trendWindow.loadFile(path.join(__dirname, 'renderer', 'trend.html'));
+  trendWindow.once('ready-to-show', () => {
+    trendWindow.show();
+    trendWindow.focus();
+  });
+  trendWindow.on('closed', () => { trendWindow = null; });
+}
+
 function openSettings() {
   if (settingsWindow && !settingsWindow.isDestroyed()) {
     settingsWindow.show();
@@ -287,6 +366,7 @@ function buildTray() {
     tray.setToolTip(i18n.t(lang, 'app.name'));
     const menu = Menu.buildFromTemplate([
       { label: i18n.t(lang, 'tray.refresh'), click: refresh },
+      { label: i18n.t(lang, 'tray.trend'), click: openTrend },
       { label: i18n.t(lang, 'tray.settings'), click: openSettings },
       { label: i18n.t(lang, 'tray.checkUpdate'), click: () => checkForUpdates(false) },
       { type: 'separator' },
@@ -416,7 +496,34 @@ ipcMain.handle('config:test', async (_e, cfg) => {
   }
 });
 ipcMain.on('open-settings', openSettings);
+ipcMain.on('open-trend', openTrend);
 ipcMain.on('quit-app', () => app.quit());
+
+ipcMain.handle('fetch-trend', async () => {
+  const cfg = loadConfig();
+  if (!cfg.nsUrl) throw new Error('Nightscout URL not configured');
+  const hours = Math.max(1, Math.min(24, cfg.trendHours || 4));
+  const base = cfg.nsUrl.replace(/\/+$/, '');
+  const sinceMs = Date.now() - hours * 60 * 60 * 1000;
+  // Use NS find filter so we never miss entries within window. count cap is large.
+  let url = `${base}/api/v1/entries.json?count=300&find[date][$gte]=${sinceMs}`;
+  if (cfg.token) {
+    const hash = crypto.createHash('sha1').update(cfg.token).digest('hex');
+    url += `&secret=${hash}&token=${encodeURIComponent(cfg.token)}`;
+  }
+  const data = await fetchJson(url);
+  return {
+    entries: Array.isArray(data) ? data.filter(e => typeof e.sgv === 'number') : [],
+    units: cfg.units,
+    hours,
+    thresholds: {
+      urgentHigh: cfg.urgentHigh,
+      high: cfg.high,
+      low: cfg.low,
+      urgentLow: cfg.urgentLow
+    }
+  };
+});
 ipcMain.on('floating:report-size', (_e, size) => {
   if (!floatingWindow || floatingWindow.isDestroyed()) return;
   if (!size || !size.width || !size.height) return;

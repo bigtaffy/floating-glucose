@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Glucose Trend</title>
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #1a1a1a;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Microsoft JhengHei", "Microsoft YaHei", Roboto, Arial, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+  .container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  header {
+    padding: 10px 16px 6px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  h1 { margin: 0; font-size: 14px; font-weight: 600; color: #aaa; }
+  .stats { font-size: 12px; color: #888; }
+  .stats span { margin-right: 12px; }
+  .stats b { color: #ddd; }
+  .chart-wrap { flex: 1; position: relative; padding: 12px; }
+  .chart-wrap svg { width: 100%; height: 100%; }
+  footer {
+    padding: 6px 16px;
+    font-size: 11px;
+    color: #666;
+    border-top: 1px solid #2a2a2a;
+    display: flex;
+    justify-content: space-between;
+  }
+  .loading, .error {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    font-size: 13px;
+  }
+  .error { color: #ff7070; }
+  .threshold-label { font-size: 9px; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1 id="title">Glucose Trend</h1>
+      <div class="stats" id="stats"></div>
+    </header>
+    <div class="chart-wrap">
+      <svg id="chart" preserveAspectRatio="none"></svg>
+      <div class="loading" id="loading">Loading...</div>
+      <div class="error" id="error" style="display:none;"></div>
+    </div>
+    <footer>
+      <span id="rangeLabel"></span>
+      <span id="updatedAt"></span>
+    </footer>
+  </div>
+<script>
+  const chartEl = document.getElementById('chart');
+  const loadingEl = document.getElementById('loading');
+  const errorEl = document.getElementById('error');
+  const titleEl = document.getElementById('title');
+  const statsEl = document.getElementById('stats');
+  const rangeLabelEl = document.getElementById('rangeLabel');
+  const updatedAtEl = document.getElementById('updatedAt');
+
+  let bundle = {};
+  function fmt(key, params) {
+    let s = bundle[key] || key;
+    if (params) s = s.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? params[k] : `{${k}}`));
+    return s;
+  }
+
+  function statusColor(sgv, t) {
+    if (sgv >= t.urgentHigh) return '#ff5252';
+    if (sgv >= t.high) return '#f5d442';
+    if (sgv <= t.urgentLow) return '#ff5252';
+    if (sgv <= t.low) return '#f5d442';
+    return '#6ee36b';
+  }
+
+  function pad(n) { return n < 10 ? '0' + n : String(n); }
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function render(data) {
+    const { entries, units, hours, thresholds } = data;
+    if (!entries || entries.length === 0) {
+      errorEl.textContent = fmt('trend.noData');
+      errorEl.style.display = 'flex';
+      loadingEl.style.display = 'none';
+      return;
+    }
+    loadingEl.style.display = 'none';
+    errorEl.style.display = 'none';
+
+    // Sort ascending by date
+    const points = entries.slice().sort((a, b) => a.date - b.date);
+    const now = Date.now();
+    const since = now - hours * 60 * 60 * 1000;
+
+    // SVG sizing
+    const rect = chartEl.getBoundingClientRect();
+    const W = Math.max(300, rect.width);
+    const H = Math.max(150, rect.height);
+    const padL = 36, padR = 12, padT = 12, padB = 22;
+    const innerW = W - padL - padR;
+    const innerH = H - padT - padB;
+
+    chartEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+
+    // Y-axis range: include thresholds + data extremes
+    const sgvValues = points.map(p => p.sgv);
+    const dataMin = Math.min(...sgvValues, thresholds.urgentLow - 10);
+    const dataMax = Math.max(...sgvValues, thresholds.urgentHigh + 20);
+    const yMin = Math.max(40, Math.floor(dataMin / 10) * 10);
+    const yMax = Math.min(400, Math.ceil(dataMax / 10) * 10);
+
+    const displayValue = (v) => units === 'mmol/L' ? (v / 18).toFixed(1) : String(v);
+    const xScale = (ts) => padL + ((ts - since) / (now - since)) * innerW;
+    const yScale = (sgv) => padT + (1 - (sgv - yMin) / (yMax - yMin)) * innerH;
+
+    let svg = '';
+
+    // Threshold bands
+    const bandIn = `
+      <rect x="${padL}" y="${yScale(thresholds.high)}"
+            width="${innerW}" height="${yScale(thresholds.low) - yScale(thresholds.high)}"
+            fill="#6ee36b" fill-opacity="0.05"/>`;
+    svg += bandIn;
+
+    // Threshold horizontal lines
+    const drawLine = (sgv, color, label) => {
+      const y = yScale(sgv);
+      svg += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="${color}" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>`;
+      svg += `<text x="${padL - 4}" y="${y + 3}" text-anchor="end" fill="${color}" class="threshold-label" opacity="0.8">${displayValue(sgv)}</text>`;
+    };
+    drawLine(thresholds.urgentHigh, '#ff5252');
+    drawLine(thresholds.high, '#f5d442');
+    drawLine(thresholds.low, '#f5d442');
+    drawLine(thresholds.urgentLow, '#ff5252');
+
+    // X-axis time labels (every hour)
+    for (let i = 0; i <= hours; i++) {
+      const ts = since + (i / hours) * (now - since);
+      const x = xScale(ts);
+      svg += `<line x1="${x}" x2="${x}" y1="${padT}" y2="${H - padB}" stroke="#333" stroke-width="0.5"/>`;
+      svg += `<text x="${x}" y="${H - padB + 14}" text-anchor="middle" fill="#888" font-size="10">${fmtTime(ts)}</text>`;
+    }
+
+    // Y-axis labels (top/bottom)
+    svg += `<text x="${padL - 6}" y="${padT + 8}" text-anchor="end" fill="#888" font-size="10">${displayValue(yMax)}</text>`;
+    svg += `<text x="${padL - 6}" y="${H - padB - 2}" text-anchor="end" fill="#888" font-size="10">${displayValue(yMin)}</text>`;
+
+    // Polyline through points (gaps for big time skips)
+    let pathSegments = '';
+    let lastX = null;
+    points.forEach((p, i) => {
+      if (p.date < since) return;
+      const x = xScale(p.date);
+      const y = yScale(p.sgv);
+      if (i === 0 || lastX === null || (x - lastX) > innerW * 0.08) {
+        pathSegments += `M ${x.toFixed(1)} ${y.toFixed(1)} `;
+      } else {
+        pathSegments += `L ${x.toFixed(1)} ${y.toFixed(1)} `;
+      }
+      lastX = x;
+    });
+    svg += `<path d="${pathSegments}" fill="none" stroke="#888" stroke-width="1.2" opacity="0.8"/>`;
+
+    // Data points
+    points.forEach(p => {
+      if (p.date < since) return;
+      const x = xScale(p.date);
+      const y = yScale(p.sgv);
+      const color = statusColor(p.sgv, thresholds);
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.5" fill="${color}"/>`;
+    });
+
+    // Last point highlighted
+    const last = points[points.length - 1];
+    if (last && last.date >= since) {
+      const x = xScale(last.date);
+      const y = yScale(last.sgv);
+      const color = statusColor(last.sgv, thresholds);
+      svg += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="5" fill="${color}" stroke="#fff" stroke-width="1.5"/>`;
+      svg += `<text x="${x.toFixed(1)}" y="${y - 9}" text-anchor="middle" fill="${color}" font-size="13" font-weight="700">${displayValue(last.sgv)}</text>`;
+    }
+
+    chartEl.innerHTML = svg;
+
+    // Stats
+    const inRangePoints = points.filter(p => p.sgv > thresholds.low && p.sgv < thresholds.high);
+    const tir = points.length > 0 ? (inRangePoints.length / points.length * 100).toFixed(0) : 0;
+    const avg = points.length > 0 ? Math.round(points.reduce((s, p) => s + p.sgv, 0) / points.length) : 0;
+    const lo = points.length > 0 ? Math.min(...sgvValues) : 0;
+    const hi = points.length > 0 ? Math.max(...sgvValues) : 0;
+
+    statsEl.innerHTML =
+      `<span>${fmt('trend.tir')} <b>${tir}%</b></span>` +
+      `<span>${fmt('trend.avg')} <b>${displayValue(avg)}</b></span>` +
+      `<span>${fmt('trend.lo')} <b>${displayValue(lo)}</b></span>` +
+      `<span>${fmt('trend.hi')} <b>${displayValue(hi)}</b></span>`;
+
+    const since_d = new Date(since), now_d = new Date(now);
+    rangeLabelEl.textContent = fmt('trend.rangeLabel', {
+      hours,
+      from: fmtTime(since_d),
+      to: fmtTime(now_d)
+    });
+    updatedAtEl.textContent = fmt('trend.updatedAt', { time: fmtTime(now_d) });
+  }
+
+  async function refresh() {
+    try {
+      const data = await window.api.fetchTrend();
+      render(data);
+    } catch (e) {
+      errorEl.textContent = (e && e.message) || String(e);
+      errorEl.style.display = 'flex';
+      loadingEl.style.display = 'none';
+    }
+  }
+
+  function applyI18n() {
+    document.title = fmt('trend.title');
+    titleEl.textContent = fmt('trend.title');
+  }
+
+  window.api.onLanguageChanged((d) => { bundle = d.bundle; applyI18n(); refresh(); });
+  window.addEventListener('resize', () => refresh());
+
+  (async () => {
+    const i = await window.api.getI18n();
+    bundle = i.bundle;
+    applyI18n();
+    await refresh();
+    // Auto-refresh every minute
+    setInterval(refresh, 60 * 1000);
+  })();
+</script>
+</body>
+</html>
