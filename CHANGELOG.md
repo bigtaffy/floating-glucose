@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **完整移除工具** — `scripts/uninstall-windows.cmd` 與 `scripts/uninstall-mac.command`，給遇到 NSIS integrity check 失敗或找不到 App 的使用者用，雙擊執行可清除：程式、安裝資料夾、設定（含 NS 密碼）、更新快取、捷徑、註冊表/偏好設定。README Q7 已加上下載連結
+
 ## [1.0.2] - 2026-05-13
 
 ### Fixed

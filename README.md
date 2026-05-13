@@ -182,9 +182,17 @@ A：目前每台電腦只能存一組 NS 設定。建議用兩個 macOS / Window
 A：在 macOS 上會浮在全螢幕應用程式之上（這是設計目的）；如果不想看到，可以拖到不會擋到的角落，或暫時取消勾選「顯示桌面浮動視窗」。
 
 **Q7：要怎麼移除這個 App？**
-A：
+A：**一般情況**直接用：
 - **macOS**：把「應用程式」裡的 FloatingGlucose 拖到垃圾桶，並刪除 `~/Library/Application Support/floating-glucose/`
 - **Windows**：控制台 → 程式集 → 解除安裝 FloatingGlucose
+
+**如果遇到** Windows 跳「Installer integrity check has failed」、或 macOS App 找不到無法移除：請下載**完整移除工具**，雙擊執行即可：
+- **Windows**：[uninstall-windows.cmd](https://github.com/bigtaffy/floating-glucose/raw/main/scripts/uninstall-windows.cmd)
+  > 下載後在檔案上右鍵 → 內容 → 勾「**解除封鎖**」（Unblock）→ 確定，再雙擊執行。
+- **macOS**：[uninstall-mac.command](https://github.com/bigtaffy/floating-glucose/raw/main/scripts/uninstall-mac.command)
+  > 下載後在 Terminal 跑 `chmod +x ~/Downloads/uninstall-mac.command`，然後雙擊執行。
+
+兩個工具會清掉：執行中的程式、安裝資料夾、設定檔（含 NS 密碼）、自動更新快取、捷徑、註冊表 / 偏好設定。執行完最後會列驗證結果，全 [OK] 就乾淨了。
 
 **Q8：App 怎麼跟我的 CGM 通訊？**
 A：**它不會跟你的 CGM 通訊**。它只跟你的 Nightscout 站台通訊。CGM → 手機 App → Nightscout 是另外一條鏈，由歐態 / xDrip+ 等 App 處理。
