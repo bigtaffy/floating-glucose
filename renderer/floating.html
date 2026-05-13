@@ -18,16 +18,23 @@
     display: inline-block;
     text-align: right;
     padding: 8px 14px;
-    text-shadow: 0 0 4px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.9);
+    text-shadow:
+      0 0 5px rgba(0,0,0,0.95),
+      0 0 3px rgba(0,0,0,0.95),
+      0 1px 2px rgba(0,0,0,0.95);
     color: #fff;
-    background: rgba(0,0,0,0.35);
+    background: rgba(0,0,0,0.4);
     border-radius: 10px;
     margin: 4px;
     min-width: 120px;
     transition: background 0.3s;
     white-space: nowrap;
   }
-  .wrap.has-data { background: rgba(0,0,0,0.18); }
+  /* When glucose data has loaded, fade backdrop to fully transparent so the
+     widget feels like text floating on the desktop (original FloatingGlucose UX).
+     Text remains legible thanks to the heavy text-shadow above. */
+  .wrap.has-data { background: rgba(0,0,0,0); }
+  .wrap.error    { background: rgba(120,0,0,0.45); }
   .wrap.no-config {
     background: rgba(60,60,60,0.55);
     text-align: center;

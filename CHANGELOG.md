@@ -7,9 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-05-13
+
+### Changed
+
+- **浮動視窗有資料時改為完全透明** — 之前 macOS 上半透明深色背景襯亮桌布變成明顯的黑灰小方塊，看起來像實心方框。改為「有資料 = 完全透明（純文字 + 強化 text-shadow）」「無資料 / 錯誤 / 未設定 = 顯示背景框」，恢復原版 FloatingGlucose 的純文字飄浮 UX，同時保留「找不到視窗」的安全網
+- 強化 text-shadow（5px 模糊 + 3px 模糊 + 向下投影），確保透明狀態下文字在任何桌布顏色都清楚
+- 錯誤狀態改用半透明紅色背景，視覺上更明確
+
 ### Added
 
 - **完整移除工具** — `scripts/uninstall-windows.cmd` 與 `scripts/uninstall-mac.command`，給遇到 NSIS integrity check 失敗或找不到 App 的使用者用，雙擊執行可清除：程式、安裝資料夾、設定（含 NS 密碼）、更新快取、捷徑、註冊表/偏好設定。README Q7 已加上下載連結
+- README macOS 安裝步驟新增「已損毀」警告的 `xattr -cr` 解法說明
 
 ## [1.0.2] - 2026-05-13
 
@@ -62,7 +71,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.2...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.0.3...HEAD
+[1.0.3]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.3
 [1.0.2]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.2
 [1.0.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.1
 [1.0.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.0
