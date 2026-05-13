@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  .desktop {
+    width: 800px;
+    height: 450px;
+    /* macOS-Sonoma-inspired gradient wallpaper, no Apple assets used */
+    background:
+      radial-gradient(ellipse at 30% 30%, rgba(255,200,140,0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 80%, rgba(120,80,180,0.5) 0%, transparent 60%),
+      linear-gradient(135deg, #2a1a5e 0%, #6b2d8e 40%, #b8439c 75%, #ff7a4a 100%);
+    position: relative;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Microsoft JhengHei", sans-serif;
+  }
+  /* fake macOS-style top menu bar for context */
+  .menubar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 26px;
+    background: rgba(0,0,0,0.18);
+    backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    color: white;
+    font-size: 13px;
+    gap: 16px;
+  }
+  .menubar .left { font-weight: 600; }
+  .menubar .right { margin-left: auto; display: flex; gap: 14px; align-items: center; font-size: 12px; }
+  .menubar .glucose { font-weight: 700; color: #6ee36b; text-shadow: 0 0 4px rgba(0,0,0,0.6); }
+  .menubar .time { opacity: 0.9; }
+  /* widget */
+  .widget {
+    position: absolute;
+    top: 56px;
+    right: 28px;
+    color: #fff;
+    text-shadow:
+      0 0 5px rgba(0,0,0,0.95),
+      0 0 3px rgba(0,0,0,0.95),
+      0 1px 2px rgba(0,0,0,0.95);
+    text-align: right;
+    line-height: 1;
+  }
+  .widget .value {
+    font-weight: 700;
+    font-size: 48px;
+    color: #6ee36b;
+  }
+  .widget .arrow { color: #6ee36b; margin-left: 4px; }
+  .widget .meta {
+    font-size: 13px;
+    margin-top: 6px;
+    opacity: 0.95;
+    line-height: 1.3;
+  }
+</style>
+</head>
+<body>
+  <div class="desktop">
+    <div class="menubar">
+      <span class="left">FloatingGlucose</span>
+      <span class="right">
+        <span class="glucose">120 →</span>
+        <span class="time">10:30</span>
+      </span>
+    </div>
+    <div class="widget">
+      <div><span class="value">120</span><span class="arrow">→</span></div>
+      <div class="meta">+2 mg/dL</div>
+      <div class="meta">just now</div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body {
+    margin: 0; padding: 0;
+    background: #1a1a1a;
+    color: #eee;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Microsoft JhengHei", sans-serif;
+    width: 640px;
+    height: 380px;
+    overflow: hidden;
+  }
+  .container { display: flex; flex-direction: column; height: 380px; }
+  header {
+    padding: 10px 16px 6px;
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: 1px solid #2a2a2a;
+  }
+  h1 { margin: 0; font-size: 14px; font-weight: 600; color: #aaa; }
+  .stats { font-size: 12px; color: #888; }
+  .stats span { margin-right: 12px; }
+  .stats b { color: #ddd; }
+  .chart-wrap { flex: 1; padding: 12px; }
+  svg { width: 100%; height: 100%; }
+  footer {
+    padding: 6px 16px;
+    font-size: 11px;
+    color: #666;
+    border-top: 1px solid #2a2a2a;
+    display: flex; justify-content: space-between;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>血糖趨勢圖</h1>
+      <div class="stats">
+        <span>範圍內 <b>78%</b></span>
+        <span>平均 <b>132</b></span>
+        <span>最低 <b>72</b></span>
+        <span>最高 <b>198</b></span>
+      </div>
+    </header>
+    <div class="chart-wrap">
+      <svg id="chart" viewBox="0 0 616 268" preserveAspectRatio="none">
+        <!-- in-range green band -->
+        <rect x="36" y="76" width="568" height="115" fill="#6ee36b" fill-opacity="0.05"/>
+
+        <!-- threshold lines + labels -->
+        <line x1="36" x2="604" y1="40" y2="40" stroke="#ff5252" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <text x="32" y="43" text-anchor="end" fill="#ff5252" font-size="9" opacity="0.8">200</text>
+
+        <line x1="36" x2="604" y1="76" y2="76" stroke="#f5d442" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <text x="32" y="79" text-anchor="end" fill="#f5d442" font-size="9" opacity="0.8">150</text>
+
+        <line x1="36" x2="604" y1="191" y2="191" stroke="#f5d442" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <text x="32" y="194" text-anchor="end" fill="#f5d442" font-size="9" opacity="0.8">85</text>
+
+        <line x1="36" x2="604" y1="225" y2="225" stroke="#ff5252" stroke-width="1" stroke-dasharray="3 4" opacity="0.5"/>
+        <text x="32" y="228" text-anchor="end" fill="#ff5252" font-size="9" opacity="0.8">68</text>
+
+        <!-- hour gridlines + labels -->
+        <line x1="36" x2="36" y1="12" y2="246" stroke="#333" stroke-width="0.5"/>
+        <text x="36" y="260" text-anchor="middle" fill="#888" font-size="10">06:30</text>
+
+        <line x1="178" x2="178" y1="12" y2="246" stroke="#333" stroke-width="0.5"/>
+        <text x="178" y="260" text-anchor="middle" fill="#888" font-size="10">07:30</text>
+
+        <line x1="320" x2="320" y1="12" y2="246" stroke="#333" stroke-width="0.5"/>
+        <text x="320" y="260" text-anchor="middle" fill="#888" font-size="10">08:30</text>
+
+        <line x1="462" x2="462" y1="12" y2="246" stroke="#333" stroke-width="0.5"/>
+        <text x="462" y="260" text-anchor="middle" fill="#888" font-size="10">09:30</text>
+
+        <line x1="604" x2="604" y1="12" y2="246" stroke="#333" stroke-width="0.5"/>
+        <text x="604" y="260" text-anchor="middle" fill="#888" font-size="10">10:30</text>
+
+        <!-- Y range labels -->
+        <text x="30" y="20" text-anchor="end" fill="#888" font-size="10">220</text>
+        <text x="30" y="244" text-anchor="end" fill="#888" font-size="10">60</text>
+
+        <!-- glucose curve -->
+        <path d="M 36 175 L 60 168 L 84 155 L 108 138 L 132 116 L 156 95 L 180 80 L 204 68 L 228 55 L 252 48 L 276 52 L 300 64 L 324 82 L 348 100 L 372 115 L 396 128 L 420 140 L 444 145 L 468 142 L 492 135 L 516 128 L 540 122 L 564 118 L 588 116 L 604 115"
+              fill="none" stroke="#888" stroke-width="1.2" opacity="0.8"/>
+
+        <!-- data points -->
+        <circle cx="36"  cy="175" r="2.5" fill="#6ee36b"/>
+        <circle cx="60"  cy="168" r="2.5" fill="#6ee36b"/>
+        <circle cx="84"  cy="155" r="2.5" fill="#6ee36b"/>
+        <circle cx="108" cy="138" r="2.5" fill="#6ee36b"/>
+        <circle cx="132" cy="116" r="2.5" fill="#6ee36b"/>
+        <circle cx="156" cy="95"  r="2.5" fill="#6ee36b"/>
+        <circle cx="180" cy="80"  r="2.5" fill="#6ee36b"/>
+        <circle cx="204" cy="68"  r="2.5" fill="#f5d442"/>
+        <circle cx="228" cy="55"  r="2.5" fill="#f5d442"/>
+        <circle cx="252" cy="48"  r="2.5" fill="#ff5252"/>
+        <circle cx="276" cy="52"  r="2.5" fill="#ff5252"/>
+        <circle cx="300" cy="64"  r="2.5" fill="#f5d442"/>
+        <circle cx="324" cy="82"  r="2.5" fill="#6ee36b"/>
+        <circle cx="348" cy="100" r="2.5" fill="#6ee36b"/>
+        <circle cx="372" cy="115" r="2.5" fill="#6ee36b"/>
+        <circle cx="396" cy="128" r="2.5" fill="#6ee36b"/>
+        <circle cx="420" cy="140" r="2.5" fill="#6ee36b"/>
+        <circle cx="444" cy="145" r="2.5" fill="#6ee36b"/>
+        <circle cx="468" cy="142" r="2.5" fill="#6ee36b"/>
+        <circle cx="492" cy="135" r="2.5" fill="#6ee36b"/>
+        <circle cx="516" cy="128" r="2.5" fill="#6ee36b"/>
+        <circle cx="540" cy="122" r="2.5" fill="#6ee36b"/>
+        <circle cx="564" cy="118" r="2.5" fill="#6ee36b"/>
+        <circle cx="588" cy="116" r="2.5" fill="#6ee36b"/>
+
+        <!-- last point highlighted -->
+        <circle cx="604" cy="115" r="5" fill="#6ee36b" stroke="#fff" stroke-width="1.5"/>
+        <text x="604" y="106" text-anchor="middle" fill="#6ee36b" font-size="13" font-weight="700">132</text>
+      </svg>
+    </div>
+    <footer>
+      <span>過去 4 小時 · 06:30 → 10:30</span>
+      <span>更新於 10:30</span>
+    </footer>
+  </div>
+</body>
+</html>

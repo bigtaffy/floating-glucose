@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Microsoft JhengHei", sans-serif;
+    font-size: 13px;
+    padding: 18px;
+    background: #f6f6f6;
+    color: #222;
+    width: 484px;
+  }
+  fieldset {
+    border: 1px solid #d0d0d0;
+    border-radius: 6px;
+    margin-bottom: 14px;
+    padding: 10px 14px 14px;
+    background: #fff;
+  }
+  legend { font-weight: 600; padding: 0 6px; color: #2a7a2a; }
+  label { display: block; margin: 8px 0 4px; }
+  input[type=text], input[type=password], input[type=number], select {
+    width: 100%;
+    padding: 6px 8px;
+    border: 1px solid #c0c0c0;
+    border-radius: 4px;
+    box-sizing: border-box;
+    font-size: 13px;
+  }
+  .row { display: flex; gap: 12px; }
+  .row > div { flex: 1; }
+  .inline { display: flex; gap: 16px; align-items: center; margin-top: 6px; }
+  .actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 10px; }
+  button {
+    padding: 8px 16px;
+    border: 1px solid #b0b0b0;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  button.primary { background: #2a7a2a; color: #fff; border-color: #2a7a2a; }
+  .hint { color: #777; font-size: 11px; margin-top: 2px; }
+</style>
+</head>
+<body>
+  <fieldset>
+    <legend>語言</legend>
+    <label>介面語言</label>
+    <select>
+      <option>繁體中文</option>
+    </select>
+  </fieldset>
+
+  <fieldset>
+    <legend>Nightscout 設定</legend>
+    <label>你的 Nightscout 網址</label>
+    <input type="text" value="https://09xxxxxx.t1ns.tw/" />
+    <div class="hint">完整網址，包含 https://，結尾斜線可加可不加</div>
+
+    <label>存取權杖 / 密碼</label>
+    <input type="password" value="••••••••••" />
+
+    <div class="inline">
+      <label style="margin:0;"><input type="radio" checked /> mg/dL（台灣）</label>
+      <label style="margin:0;"><input type="radio" /> mmol/L</label>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>警報閾值</legend>
+    <div class="row">
+      <div><label>緊急高血糖</label><input type="number" value="200" /></div>
+      <div><label>高血糖</label><input type="number" value="150" /></div>
+      <div><label>低血糖</label><input type="number" value="85" /></div>
+      <div><label>緊急低血糖</label><input type="number" value="68" /></div>
+    </div>
+  </fieldset>
+
+  <fieldset>
+    <legend>警報與通知</legend>
+    <label><input type="checkbox" checked /> 緊急高/低血糖時播放警報音</label>
+    <label><input type="checkbox" checked /> 緊急血糖 / CGM 失聯時跳系統通知</label>
+    <label>趨勢圖時間範圍（小時，1–24）</label>
+    <input type="number" value="4" style="width: 80px;" />
+  </fieldset>
+
+  <div class="actions">
+    <button>測試連線</button>
+    <button class="primary">驗證並儲存</button>
+  </div>
+</body>
+</html>
