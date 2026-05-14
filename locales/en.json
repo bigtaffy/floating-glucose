@@ -47,6 +47,8 @@
   "floating.minutesAgo": "{n} mins ago",
   "floating.error": "ERR",
   "floating.needsSetup": "Click ⚙ to add a profile",
+  "floating.needsUrlRow": "needs URL — click to setup",
+  "floating.unnamed": "(unnamed)",
   "floating.settingsTooltip": "Settings",
 
   "settings.title": "Glucose Settings",

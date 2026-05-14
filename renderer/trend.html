@@ -276,10 +276,26 @@
   window.api.onLanguageChanged((d) => { bundle = d.bundle; applyI18n(); refresh(); });
   window.addEventListener('resize', () => refresh());
 
+  // If user re-opens the trend window for a different profile while it's
+  // already open, switch to that profile.
+  if (window.api.onTrendSetProfile) {
+    window.api.onTrendSetProfile((profileId) => {
+      currentProfileId = profileId;
+      refresh();
+    });
+  }
+
   (async () => {
     const i = await window.api.getI18n();
     bundle = i.bundle;
     applyI18n();
+
+    // Use the profile the user clicked on (passed via main process)
+    try {
+      const initial = await window.api.getInitialTrendProfileId();
+      if (initial) currentProfileId = initial;
+    } catch (_) {}
+
     await refresh();
     // Auto-refresh every minute
     setInterval(refresh, 60 * 1000);

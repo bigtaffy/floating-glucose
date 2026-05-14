@@ -47,6 +47,8 @@
   "floating.minutesAgo": "{n} 分鐘前",
   "floating.error": "錯誤",
   "floating.needsSetup": "點 ⚙ 新增 NS 帳號",
+  "floating.needsUrlRow": "尚未設定網址 — 點此前往設定",
+  "floating.unnamed": "（未命名）",
   "floating.settingsTooltip": "設定",
 
   "settings.title": "血糖鐘設定",

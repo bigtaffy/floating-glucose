@@ -47,6 +47,8 @@
   "floating.minutesAgo": "{n} 分前",
   "floating.error": "エラー",
   "floating.needsSetup": "⚙ をクリックして NS アカウントを追加",
+  "floating.needsUrlRow": "URL 未設定 — クリックして設定へ",
+  "floating.unnamed": "（名前なし）",
   "floating.settingsTooltip": "設定",
 
   "settings.title": "血糖計の設定",

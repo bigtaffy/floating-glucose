@@ -231,9 +231,9 @@ function handleStateTransition(profile, profileIndex, newStatus, ageMin, sgv, cf
  */
 async function refreshAll() {
   const cfg = loadConfig();
-  const profiles = cfg.profiles.filter(p => p.enabled && p.nsUrl);
+  const enabledProfiles = cfg.profiles.filter(p => p.enabled);
 
-  if (profiles.length === 0) {
+  if (enabledProfiles.length === 0) {
     if (floatingWindow && !floatingWindow.isDestroyed()) {
       floatingWindow.webContents.send('glucose-update-all', {
         profiles: [],
@@ -245,6 +245,12 @@ async function refreshAll() {
     if (cfg.showInMenuBar) updateTrayTitle('');
     return;
   }
+
+  // Split into fetchable (have URL) and needs-setup. Both groups still appear
+  // in the floating widget so the user can see all their profiles, even ones
+  // that haven't been finished setting up.
+  const profiles = enabledProfiles.filter(p => p.nsUrl);
+  const needsUrlProfiles = enabledProfiles.filter(p => !p.nsUrl);
 
   const results = await Promise.allSettled(profiles.map(p => fetchGlucoseForProfile(p)));
 
@@ -279,6 +285,16 @@ async function refreshAll() {
       status,
       sgvRaw: sgv
     };
+  });
+
+  // Append needs-URL placeholders so the user sees them in the floating widget
+  needsUrlProfiles.forEach(p => {
+    updates.push({
+      profileId: p.id,
+      name: p.name,
+      color: p.color,
+      needsUrl: true
+    });
   });
 
   if (floatingWindow && !floatingWindow.isDestroyed()) {
@@ -378,8 +394,12 @@ function createFloatingWindow() {
   floatingWindow.webContents.on('did-finish-load', () => scheduleRefresh());
 }
 
-function openTrend() {
+let pendingTrendProfileId = null;
+
+function openTrend(profileId) {
+  if (profileId) pendingTrendProfileId = profileId;
   if (trendWindow && !trendWindow.isDestroyed()) {
+    if (profileId) trendWindow.webContents.send('trend:set-profile', profileId);
     trendWindow.show();
     trendWindow.focus();
     return;
@@ -607,7 +627,12 @@ ipcMain.handle('i18n:setLanguage', (_e, lang) => {
 });
 
 ipcMain.on('open-settings', openSettings);
-ipcMain.on('open-trend', openTrend);
+ipcMain.on('open-trend', (_e, profileId) => openTrend(profileId));
+ipcMain.handle('trend:initialProfileId', () => {
+  const id = pendingTrendProfileId;
+  pendingTrendProfileId = null;
+  return id;
+});
 ipcMain.on('quit-app', () => app.quit());
 
 ipcMain.on('floating:report-size', (_e, size) => {

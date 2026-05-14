@@ -12,8 +12,12 @@ contextBridge.exposeInMainWorld('api', {
 
   // windows
   openSettings: () => ipcRenderer.send('open-settings'),
-  openTrend: () => ipcRenderer.send('open-trend'),
+  openTrend: (profileId) => ipcRenderer.send('open-trend', profileId || null),
   quit: () => ipcRenderer.send('quit-app'),
+
+  // trend window initial selection
+  getInitialTrendProfileId: () => ipcRenderer.invoke('trend:initialProfileId'),
+  onTrendSetProfile: (cb) => ipcRenderer.on('trend:set-profile', (_e, id) => cb(id)),
 
   // glucose events (multi-profile)
   onGlucoseUpdateAll: (cb) => ipcRenderer.on('glucose-update-all', (_e, data) => cb(data)),

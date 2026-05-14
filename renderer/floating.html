@@ -51,10 +51,17 @@
     font-size: 12px;
     font-weight: 600;
     opacity: 0.9;
-    max-width: 90px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    /* No max-width — let names extend, the parent grid will grow the column.
+       The floating window itself will resize-to-content via ResizeObserver. */
+    white-space: nowrap;
   }
+  .row .name .name-hint {
+    font-size: 10px;
+    opacity: 0.7;
+    font-weight: 400;
+    margin-left: 4px;
+  }
+  .row.needs-url .value-line { color: #aaa; font-size: 12px; font-weight: 500; }
   .row .value-block {
     text-align: right;
     line-height: 1;
@@ -159,19 +166,35 @@
   function renderRow(p, isOnly) {
     const tr = document.createElement('div');
     tr.className = 'row';
+    const displayName = p.name || fmt('floating.unnamed') || '(unnamed)';
+
+    if (p.needsUrl) {
+      tr.classList.add('needs-url');
+      tr.innerHTML = `
+        <div class="name">${escapeHtml(displayName)}</div>
+        <div class="value-block">
+          <div class="value-line">${fmt('floating.needsUrlRow')}</div>
+        </div>`;
+      tr.querySelector('.value-line').addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.api.openSettings();
+      });
+      return tr;
+    }
+
     if (p.error) {
       tr.classList.add('error');
       tr.innerHTML = `
-        <div class="name">${p.name || ''}</div>
+        <div class="name">${escapeHtml(displayName)}</div>
         <div class="value-block">
           <div class="value-line">ERR</div>
-          <div class="meta">${(p.error || '').slice(0, 32)}</div>
+          <div class="meta">${escapeHtml((p.error || '').slice(0, 32))}</div>
         </div>`;
     } else {
       tr.classList.add(p.status || 'in-range');
       const sizePx = isOnly ? fontSize : Math.max(18, Math.round(fontSize * 0.7));
       tr.innerHTML = `
-        <div class="name">${p.name || ''}</div>
+        <div class="name">${escapeHtml(displayName)}</div>
         <div class="value-block">
           <div class="value-line" style="font-size:${sizePx}px;">
             <span>${p.value}</span><span class="arrow">${p.arrow || ''}</span>
@@ -181,9 +204,15 @@
     }
     tr.querySelector('.value-line').addEventListener('click', (e) => {
       e.stopPropagation();
-      window.api.openTrend();
+      window.api.openTrend(p.profileId);
     });
     return tr;
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
   }
 
   function render(data) {

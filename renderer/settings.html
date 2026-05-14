@@ -67,6 +67,23 @@
     border-color: #2a7a2a;
     border-width: 2px;
   }
+  .profile-item.disabled {
+    background: #f0f0f0;
+    border-left: 4px solid #b85050;
+    opacity: 0.75;
+  }
+  .profile-item.disabled .profile-color-dot { filter: grayscale(1); }
+  .profile-item.disabled .profile-name {
+    text-decoration: line-through;
+    color: #888;
+  }
+  .profile-item.disabled .profile-name::after {
+    content: ' · 已停用';
+    color: #b85050;
+    font-weight: 700;
+    font-size: 11px;
+    text-decoration: none;
+  }
   .profile-color-dot {
     width: 14px; height: 14px;
     border-radius: 50%;
@@ -200,6 +217,7 @@
         item.innerHTML = renderEditor(p);
         wireEditor(item, p);
       } else {
+        if (!p.enabled) item.classList.add('disabled');
         item.innerHTML = renderSummary(p);
         item.querySelector('[data-act="edit"]').addEventListener('click', () => {
           editingId = p.id;
