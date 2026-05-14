@@ -20,9 +20,10 @@ render() {
 }
 
 echo "Rendering screenshots..."
-render _floating-demo.html floating-on-desktop.png 800 450
-render _trend-demo.html    trend-chart.png        640 380
-render _settings-demo.html settings.png           520 720
+render _floating-demo.html       floating-on-desktop.png 800 450
+render _floating-multi-demo.html floating-multi.png      800 450
+render _trend-demo.html          trend-chart.png         640 380
+render _settings-demo.html       settings.png            520 720
 
 echo "Done. Output:"
 ls -la *.png

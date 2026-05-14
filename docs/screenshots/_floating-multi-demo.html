@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  .desktop {
+    width: 800px;
+    height: 450px;
+    background:
+      radial-gradient(ellipse at 25% 25%, rgba(255,220,150,0.4) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 75%, rgba(130,200,255,0.5) 0%, transparent 60%),
+      linear-gradient(135deg, #1e3a5f 0%, #2d6a8e 40%, #4a9c8c 75%, #7ac77a 100%);
+    position: relative;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Microsoft JhengHei", sans-serif;
+  }
+  .menubar {
+    position: absolute; top: 0; left: 0; right: 0;
+    height: 26px;
+    background: rgba(0,0,0,0.2);
+    backdrop-filter: blur(20px);
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    color: white;
+    font-size: 13px;
+  }
+  .menubar .left { font-weight: 600; }
+  .menubar .right { margin-left: auto; display: flex; gap: 12px; align-items: center; font-size: 12px; }
+  .menubar .glucose { font-weight: 700; text-shadow: 0 0 4px rgba(0,0,0,0.6); }
+  .menubar .time { opacity: 0.9; }
+
+  /* multi-profile widget */
+  .widget {
+    position: absolute;
+    top: 52px;
+    right: 28px;
+    background: rgba(0,0,0,0.22);
+    border-radius: 12px;
+    padding: 12px 16px;
+    color: #fff;
+    text-shadow: 0 0 5px rgba(0,0,0,0.9), 0 1px 2px rgba(0,0,0,0.9);
+  }
+  .row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 14px;
+    align-items: center;
+  }
+  .row + .row { margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,0.2); }
+  .row .name { font-size: 13px; font-weight: 600; opacity: 0.95; }
+  .row .vb { text-align: right; line-height: 1; }
+  .row .value { font-weight: 700; font-size: 30px; }
+  .row .arrow { margin-left: 4px; }
+  .row .meta { font-size: 11px; opacity: 0.88; margin-top: 4px; }
+  .green  { color: #6ee36b; }
+  .yellow { color: #f5d442; }
+  .red    { color: #ff5252; }
+</style>
+</head>
+<body>
+  <div class="desktop">
+    <div class="menubar">
+      <span class="left">FloatingGlucose</span>
+      <span class="right">
+        <span class="glucose"><span class="green">我 138 →</span> · <span class="yellow">小明 76 ↓</span></span>
+        <span class="time">10:30</span>
+      </span>
+    </div>
+    <div class="widget">
+      <div class="row">
+        <div class="name">我自己</div>
+        <div class="vb">
+          <div class="value green">138<span class="arrow">→</span></div>
+          <div class="meta">+3 mg/dL · 剛剛</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="name">小明</div>
+        <div class="vb">
+          <div class="value yellow">76<span class="arrow">↓</span></div>
+          <div class="meta">-8 mg/dL · 1 分鐘前</div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="name">媽媽</div>
+        <div class="vb">
+          <div class="value green">112<span class="arrow">↗</span></div>
+          <div class="meta">+5 mg/dL · 2 分鐘前</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

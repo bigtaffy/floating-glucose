@@ -434,6 +434,62 @@ section { padding: 80px 24px; position: relative; z-index: 2; }
   transition: background 0.4s;
 }
 
+/* ---------- Multi-user section ---------- */
+.multi {
+  background: rgba(255, 255, 255, 0.45);
+  backdrop-filter: blur(10px);
+}
+.multi-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+.multi-badge {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--accent-cyan), var(--primary-2));
+  color: white;
+  font-size: 0.8rem;
+  font-weight: 800;
+  padding: 5px 14px;
+  border-radius: 100px;
+  margin-bottom: 16px;
+  letter-spacing: 0.02em;
+}
+.multi-text h2 { margin-bottom: 16px; }
+.multi-text > p { color: var(--text-muted); font-size: 1.1rem; margin-bottom: 20px; }
+.multi-list { list-style: none; padding: 0; margin: 0; }
+.multi-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 0;
+  font-size: 1rem;
+  border-bottom: 1px dashed rgba(0, 0, 0, 0.07);
+}
+.multi-list li:last-child { border-bottom: none; }
+.multi-emoji { font-size: 1.4rem; flex-shrink: 0; }
+.multi-art img {
+  width: 100%;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+  transform: perspective(1000px) rotateY(6deg) rotateX(2deg);
+  transition: transform 0.5s;
+}
+.multi-art img:hover {
+  transform: perspective(1000px) rotateY(2deg) rotateX(1deg);
+}
+.multi-caption {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 12px;
+}
+@media (max-width: 860px) {
+  .multi-grid { grid-template-columns: 1fr; gap: 32px; }
+  .multi-art img { transform: none; }
+}
+
 /* ---------- How (steps) ---------- */
 .steps {
   display: flex;
