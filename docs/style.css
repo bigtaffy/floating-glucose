@@ -7,7 +7,7 @@
 html, body { margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Microsoft JhengHei", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
+  font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, "Segoe UI", "Hiragino Sans", "Microsoft JhengHei", "Microsoft YaHei", "Helvetica Neue", Arial, sans-serif;
   color: var(--text);
   background: linear-gradient(135deg, #FFE0EC 0%, #FFD1F2 25%, #E9D6FF 55%, #C9E4FF 80%, #FFE8B0 100%);
   background-attachment: fixed;
@@ -15,6 +15,7 @@ body {
   overflow-x: hidden;
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
+  font-synthesis: none;
 }
 
 /* ---------- Design tokens ---------- */
