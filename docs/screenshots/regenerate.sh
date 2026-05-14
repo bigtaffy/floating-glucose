@@ -25,5 +25,13 @@ render _floating-multi-demo.html floating-multi.png      800 450
 render _trend-demo.html          trend-chart.png         640 380
 render _settings-demo.html       settings.png            520 720
 
+# OG share card renders one level up (docs/og-image.png), not into screenshots/
+echo "Rendering OG image..."
+"$CHROME" --headless --disable-gpu --hide-scrollbars \
+  --screenshot="$PWD/../og-image.png" \
+  --window-size=1200,630 \
+  "file://$PWD/_og-image.html" > /dev/null 2>&1
+echo "  ../og-image.png  (1200 x 630)"
+
 echo "Done. Output:"
 ls -la *.png

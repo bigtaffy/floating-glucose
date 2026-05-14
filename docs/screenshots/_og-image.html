@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  .og {
+    width: 1200px;
+    height: 630px;
+    background:
+      radial-gradient(ellipse at 20% 20%, rgba(255,180,210,0.7) 0%, transparent 50%),
+      radial-gradient(ellipse at 85% 80%, rgba(150,120,255,0.6) 0%, transparent 55%),
+      radial-gradient(ellipse at 70% 15%, rgba(130,230,200,0.5) 0%, transparent 50%),
+      linear-gradient(135deg, #FFE0EC 0%, #FFD1F2 30%, #E9D6FF 60%, #C9E4FF 85%, #FFE8B0 100%);
+    position: relative;
+    overflow: hidden;
+    font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, sans-serif;
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
+    padding: 0 80px;
+  }
+  .left { flex: 1; }
+  .badge {
+    display: inline-block;
+    background: rgba(255,255,255,0.7);
+    color: #B557F5;
+    font-weight: 800;
+    font-size: 22px;
+    padding: 8px 20px;
+    border-radius: 100px;
+    margin-bottom: 24px;
+  }
+  h1 {
+    margin: 0;
+    font-size: 88px;
+    font-weight: 900;
+    line-height: 1.05;
+    color: #2D1B4E;
+    letter-spacing: -0.02em;
+  }
+  .grad {
+    background: linear-gradient(135deg, #FF4081 0%, #B557F5 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .sub {
+    font-size: 30px;
+    color: #6F5C99;
+    margin-top: 24px;
+    font-weight: 500;
+    line-height: 1.4;
+  }
+  .tags {
+    margin-top: 36px;
+    display: flex;
+    gap: 14px;
+  }
+  .tag {
+    background: rgba(255,255,255,0.8);
+    color: #2D1B4E;
+    font-size: 20px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 14px;
+  }
+  .right {
+    width: 420px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  /* mini desktop with widget */
+  .mock {
+    width: 400px;
+    background: linear-gradient(135deg, #2A1A5E 0%, #6B2D8E 45%, #FF7A4A 100%);
+    border-radius: 24px;
+    box-shadow: 0 30px 80px rgba(181,87,245,0.4);
+    overflow: hidden;
+    transform: rotate(3deg);
+  }
+  .mock-bar {
+    height: 32px;
+    background: rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 7px;
+  }
+  .dot { width: 13px; height: 13px; border-radius: 50%; }
+  .r { background: #ff5f57; } .y { background: #febc2e; } .g { background: #28c840; }
+  .mock-body { padding: 28px 26px 36px; }
+  .wrow { display: grid; grid-template-columns: auto 1fr; gap: 16px; align-items: center; color: #fff; }
+  .wrow + .wrow { margin-top: 14px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.22); }
+  .wname { font-size: 19px; font-weight: 700; text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+  .wvb { text-align: right; }
+  .wval { font-size: 44px; font-weight: 800; text-shadow: 0 2px 5px rgba(0,0,0,0.7); line-height: 1; }
+  .wmeta { font-size: 14px; opacity: 0.9; margin-top: 5px; text-shadow: 0 1px 2px rgba(0,0,0,0.7); }
+  .green { color: #6ee36b; } .yellow { color: #f5d442; }
+</style>
+</head>
+<body>
+  <div class="og">
+    <div class="left">
+      <span class="badge">🩸 免費 · 開源</span>
+      <h1>桌面血糖鐘<br><span class="grad">永遠在你眼角</span></h1>
+      <div class="sub">從 Nightscout 即時讀取血糖值<br>浮在 macOS 與 Windows 桌面</div>
+      <div class="tags">
+        <span class="tag">🍎 macOS</span>
+        <span class="tag">🪟 Windows</span>
+        <span class="tag">👨‍👩‍👧 多人同時看</span>
+      </div>
+    </div>
+    <div class="right">
+      <div class="mock">
+        <div class="mock-bar">
+          <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
+        </div>
+        <div class="mock-body">
+          <div class="wrow">
+            <div class="wname">我自己</div>
+            <div class="wvb">
+              <div class="wval green">138 →</div>
+              <div class="wmeta">+3 mg/dL · 剛剛</div>
+            </div>
+          </div>
+          <div class="wrow">
+            <div class="wname">小明</div>
+            <div class="wvb">
+              <div class="wval yellow">76 ↓</div>
+              <div class="wmeta">-8 mg/dL · 1 分鐘前</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
