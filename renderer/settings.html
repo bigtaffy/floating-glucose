@@ -154,6 +154,7 @@
     <label style="margin-top:10px;"><input type="checkbox" id="showFloating" /> <span data-i18n="settings.showFloating">Show floating widget on desktop</span></label>
     <label><input type="checkbox" id="showInMenuBar" /> <span data-i18n="settings.showInMenuBar">Show value in menu bar (macOS only)</span></label>
     <label><input type="checkbox" id="hideDock" /> <span data-i18n="settings.hideDock">Hide Dock icon (macOS only)</span></label>
+    <label><input type="checkbox" id="showTrayValue" /> <span data-i18n="settings.showTrayValue">Show value in system tray icon (Windows only)</span></label>
   </fieldset>
 
   <fieldset>
@@ -338,7 +339,7 @@
 
   /* ===== Shared form fields ===== */
   const sharedNumericIds = ['fontSize','refreshSec','trendHours'];
-  const sharedBoolIds = ['showFloating','showInMenuBar','hideDock','enableSoundAlarms','enableStaleNotification'];
+  const sharedBoolIds = ['showFloating','showInMenuBar','hideDock','showTrayValue','enableSoundAlarms','enableStaleNotification'];
   const languageSelect = document.getElementById('language');
 
   function readSharedIntoConfig() {

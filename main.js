@@ -37,9 +37,22 @@ const DEFAULT_CONFIG = {
   showFloating: true,
   showInMenuBar: true,
   hideDock: false,
+  showTrayValue: true,
   enableSoundAlarms: true,
   enableStaleNotification: true,
   trendHours: 4
+};
+
+// For picking which profile's value to render into the Windows tray icon
+// (and which to prioritise in the macOS title): higher = more attention.
+const STATUS_PRIORITY = {
+  'urgent-low': 6,
+  'urgent-high': 6,
+  'low': 4,
+  'high': 4,
+  'stale-urgent': 3,
+  'stale-warn': 2,
+  'in-range': 1
 };
 
 let floatingWindow = null;
@@ -113,13 +126,50 @@ function saveConfig(cfg) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(cfg, null, 2));
 }
 
+// Turn low-level network errors into a short, human-readable message.
+// Node throws AggregateError when every resolved address fails to connect —
+// its own .message is usually empty, so dig into .errors[0] / .code.
+function describeNetError(err) {
+  let e = err;
+  if (e && Array.isArray(e.errors) && e.errors.length) e = e.errors[0];
+  const code = e && e.code;
+  switch (code) {
+    case 'ENOTFOUND':
+    case 'EAI_AGAIN':
+      return 'Cannot reach server (wrong URL or no internet)';
+    case 'ECONNREFUSED':
+      return 'Server refused the connection';
+    case 'ETIMEDOUT':
+      return 'Connection timed out';
+    case 'CERT_HAS_EXPIRED':
+      return 'Server certificate expired';
+    case 'UNABLE_TO_VERIFY_LEAF_SIGNATURE':
+    case 'DEPTH_ZERO_SELF_SIGNED_CERT':
+      return 'Server certificate not trusted';
+    default:
+      break;
+  }
+  if (e && e.message) return e.message;
+  if (code) return code;
+  return 'Network error';
+}
+
 function fetchJson(urlStr) {
   return new Promise((resolve, reject) => {
-    const url = new URL(urlStr);
+    let url;
+    try {
+      url = new URL(urlStr);
+    } catch (_) {
+      return reject(new Error('Invalid URL'));
+    }
     const lib = url.protocol === 'https:' ? https : http;
     const req = lib.get(url, (res) => {
       if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
         return fetchJson(new URL(res.headers.location, urlStr).toString()).then(resolve, reject);
+      }
+      if (res.statusCode === 401 || res.statusCode === 403) {
+        res.resume();
+        return reject(new Error('Unauthorized — check your token / password'));
       }
       if (res.statusCode !== 200) {
         res.resume();
@@ -129,11 +179,15 @@ function fetchJson(urlStr) {
       res.setEncoding('utf8');
       res.on('data', (c) => body += c);
       res.on('end', () => {
-        try { resolve(JSON.parse(body)); } catch (e) { reject(e); }
+        try {
+          resolve(JSON.parse(body));
+        } catch (_) {
+          reject(new Error('Server did not return valid data'));
+        }
       });
     });
-    req.on('error', reject);
-    req.setTimeout(15000, () => req.destroy(new Error('timeout')));
+    req.on('error', (err) => reject(new Error(describeNetError(err))));
+    req.setTimeout(15000, () => req.destroy(new Error('Connection timed out')));
   });
 }
 
@@ -305,19 +359,53 @@ async function refreshAll() {
     });
   }
 
-  if (cfg.showInMenuBar) {
-    const trayParts = updates
-      .filter(u => !u.error)
-      .map(u => {
-        const prefix = profiles.length > 1 ? `${u.name} ` : '';
-        return `${prefix}${u.value}${u.arrow ? ' ' + u.arrow : ''}`;
-      });
-    updateTrayTitle(trayParts.join(' · ') || '--');
+  // Build the combined text once — used for macOS title and the tray tooltip.
+  const trayParts = updates
+    .filter(u => !u.error && !u.needsUrl)
+    .map(u => {
+      const prefix = profiles.length > 1 ? `${u.name} ` : '';
+      return `${prefix}${u.value}${u.arrow ? ' ' + u.arrow : ''}`;
+    });
+  const combinedText = trayParts.join(' · ') || '--';
+
+  // macOS: text next to the menu-bar icon
+  if (process.platform === 'darwin') {
+    updateTrayTitle(cfg.showInMenuBar ? combinedText : '');
+  }
+
+  // Tooltip works on all platforms — show every profile on hover.
+  if (tray) {
+    const tipLines = updates.map(u => {
+      if (u.needsUrl) return `${u.name}: (尚未設定網址)`;
+      if (u.error) return `${u.name}: ERR`;
+      return `${u.name}: ${u.value}${u.arrow ? ' ' + u.arrow : ''}  ${u.delta} ${cfg.units}`;
+    });
+    try { tray.setToolTip(tipLines.join('\n') || i18n.t(cfg.language, 'app.name')); } catch (_) {}
+  }
+
+  // Windows: render the most-urgent profile's value INTO the tray icon, since
+  // the Windows notification area can't show text beside an icon.
+  if (process.platform === 'win32') {
+    if (cfg.showTrayValue !== false) {
+      const realUpdates = updates.filter(u => !u.error && !u.needsUrl);
+      if (realUpdates.length > 0 && floatingWindow && !floatingWindow.isDestroyed()) {
+        const pick = realUpdates.slice().sort(
+          (a, b) => (STATUS_PRIORITY[b.status] || 0) - (STATUS_PRIORITY[a.status] || 0)
+        )[0];
+        floatingWindow.webContents.send('render-tray-icon', {
+          value: pick.value,
+          status: pick.status
+        });
+      }
+    } else if (tray) {
+      // showTrayValue turned off → restore the static blood-drop icon
+      try { tray.setImage(makeTrayIcon()); } catch (_) {}
+    }
   }
 
   // Process state transitions for alarms / notifications
   updates.forEach((u, i) => {
-    if (u.error) return;
+    if (u.error || u.needsUrl) return;
     handleStateTransition(profiles[i], i, u.status, u.ageMin, u.sgvRaw, cfg);
   });
 
@@ -337,13 +425,14 @@ function scheduleRefresh() {
 
 function applyVisibility() {
   const cfg = loadConfig();
+  // The floating window always exists — it is both the desktop widget AND
+  // the rendering engine for the Windows tray icon. We only show/hide it.
+  if (!floatingWindow || floatingWindow.isDestroyed()) {
+    createFloatingWindow();
+  }
   if (cfg.showFloating) {
-    if (!floatingWindow || floatingWindow.isDestroyed()) {
-      createFloatingWindow();
-    } else if (!floatingWindow.isVisible()) {
-      floatingWindow.show();
-    }
-  } else if (floatingWindow && !floatingWindow.isDestroyed()) {
+    if (!floatingWindow.isVisible()) floatingWindow.show();
+  } else {
     floatingWindow.hide();
   }
 
@@ -352,7 +441,7 @@ function applyVisibility() {
     else app.dock.show();
   }
 
-  if (!cfg.showInMenuBar) updateTrayTitle('');
+  if (!cfg.showInMenuBar && process.platform === 'darwin') updateTrayTitle('');
 }
 
 function createFloatingWindow() {
@@ -366,6 +455,7 @@ function createFloatingWindow() {
     height: 110,
     x: cfg.windowX ?? defaultX,
     y: cfg.windowY ?? defaultY,
+    show: cfg.showFloating,
     frame: false,
     transparent: true,
     resizable: false,
@@ -681,6 +771,18 @@ ipcMain.handle('profiles:list', () => {
   return cfg.profiles
     .filter(p => p.enabled && p.nsUrl)
     .map(p => ({ id: p.id, name: p.name }));
+});
+
+// Windows: the floating renderer drew the glucose number into a 32x32 canvas
+// and sent back the PNG data URL — apply it as the tray icon.
+ipcMain.on('tray:icon-ready', (_e, dataUrl) => {
+  if (process.platform !== 'win32' || !tray || !dataUrl) return;
+  try {
+    const img = nativeImage.createFromDataURL(dataUrl);
+    if (img && !img.isEmpty()) tray.setImage(img);
+  } catch (e) {
+    console.error('Failed to apply tray icon:', e);
+  }
 });
 
 // ===== Lifecycle =====

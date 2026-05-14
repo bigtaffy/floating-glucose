@@ -163,6 +163,63 @@
     else playBeeps(HIGH_TONES[idx], 3, 0.18, 0.12);
   });
 
+  // ===== Windows tray icon rendering =====
+  // The Windows notification area can't show text next to an icon, so we draw
+  // the glucose value into a 32x32 image and hand it back to the main process
+  // to use as the tray icon. Rounded-rect background in the status colour with
+  // white text → readable on both light and dark Windows taskbars.
+  const STATUS_BG = {
+    'in-range': '#3aa83a',
+    'high': '#c79a16',
+    'urgent-high': '#cc2020',
+    'low': '#c79a16',
+    'urgent-low': '#cc2020',
+    'stale-warn': '#777777',
+    'stale-urgent': '#555555'
+  };
+  function renderTrayIcon(data) {
+    try {
+      const S = 32;
+      const canvas = document.createElement('canvas');
+      canvas.width = S; canvas.height = S;
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, S, S);
+
+      // rounded-rect background
+      const bg = STATUS_BG[data.status] || '#3aa83a';
+      const r = 6;
+      ctx.fillStyle = bg;
+      ctx.beginPath();
+      ctx.moveTo(r, 0);
+      ctx.arcTo(S, 0, S, S, r);
+      ctx.arcTo(S, S, 0, S, r);
+      ctx.arcTo(0, S, 0, 0, r);
+      ctx.arcTo(0, 0, S, 0, r);
+      ctx.closePath();
+      ctx.fill();
+
+      // value text — shrink font to fit (handles 2-3 digits / mmol decimals)
+      const text = String(data.value);
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      let fontPx = 22;
+      ctx.font = `bold ${fontPx}px -apple-system, "Segoe UI", Arial, sans-serif`;
+      while (ctx.measureText(text).width > S - 4 && fontPx > 9) {
+        fontPx -= 1;
+        ctx.font = `bold ${fontPx}px -apple-system, "Segoe UI", Arial, sans-serif`;
+      }
+      ctx.fillText(text, S / 2, S / 2 + 1);
+
+      window.api.sendTrayIcon(canvas.toDataURL('image/png'));
+    } catch (e) {
+      console.error('renderTrayIcon failed:', e);
+    }
+  }
+  if (window.api.onRenderTrayIcon) {
+    window.api.onRenderTrayIcon(renderTrayIcon);
+  }
+
   function renderRow(p, isOnly) {
     const tr = document.createElement('div');
     tr.className = 'row';

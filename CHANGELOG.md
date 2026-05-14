@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-05-14
+
+### Added — Windows 系統匣顯示血糖數字
+
+- **Windows 系統匣圖示顯示血糖數字** — Windows 的通知區域無法在圖示旁放文字（系統限制），改為把血糖數字「畫進圖示裡」：32×32 圓角底圖 + 白色數字，依血糖等級變色（綠/黃/紅/灰），在淺色或深色工作列都清楚
+  - 多 profile 時顯示「**最緊急**」的那一個（urgent > high/low > stale > in-range；同級取第一個）
+  - 字體自動縮放以容納 2-3 位數字 / mmol 小數
+  - 設定畫面新增開關「在系統匣圖示顯示血糖數字（僅 Windows）」，預設開
+- **系統匣 / 選單列 tooltip 顯示所有 profile** — 滑鼠移到圖示上會列出每個 profile 的完整數值（跨平台，多行）
+
+### Fixed
+
+- **浮動視窗關閉時資料停止更新** — 之前 `showFloating: false`（純選單列模式）會導致浮動視窗不被建立，連帶 refresh 排程從未啟動。現在浮動視窗一律建立（隱藏時只是不顯示），它同時是資料引擎與 Windows tray 圖示的渲染器
+
+### Changed
+
+- 浮動視窗生命週期：與「是否顯示」解耦 — 視窗永遠存在，`showFloating` 只控制顯示/隱藏
+
 ## [2.0.0] - 2026-05-14
 
 ### Added — 多用戶版
@@ -157,7 +175,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v2.1.0
 [2.0.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v2.0.0
 [1.1.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.1.1
 [1.1.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.1.0

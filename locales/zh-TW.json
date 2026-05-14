@@ -88,6 +88,7 @@
   "settings.showFloating": "顯示桌面浮動視窗",
   "settings.showInMenuBar": "在選單列顯示血糖值（僅 macOS）",
   "settings.hideDock": "隱藏 Dock 圖示（僅 macOS，純選單列模式）",
+  "settings.showTrayValue": "在系統匣圖示顯示血糖數字（僅 Windows）",
   "settings.languageSection": "語言",
   "settings.languageLabel": "介面語言",
   "settings.testBtn": "測試連線",

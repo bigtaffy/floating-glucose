@@ -88,6 +88,7 @@
   "settings.showFloating": "Show floating widget on desktop",
   "settings.showInMenuBar": "Show value in menu bar (macOS only)",
   "settings.hideDock": "Hide Dock icon (macOS only, menu-bar-only mode)",
+  "settings.showTrayValue": "Show value in system tray icon (Windows only)",
   "settings.languageSection": "Language",
   "settings.languageLabel": "Interface language",
   "settings.testBtn": "Test connection",

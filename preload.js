@@ -23,6 +23,10 @@ contextBridge.exposeInMainWorld('api', {
   onGlucoseUpdateAll: (cb) => ipcRenderer.on('glucose-update-all', (_e, data) => cb(data)),
   onPlayAlarm: (cb) => ipcRenderer.on('play-alarm', (_e, data) => cb(data)),
 
+  // Windows tray icon rendering (renderer draws number → main applies it)
+  onRenderTrayIcon: (cb) => ipcRenderer.on('render-tray-icon', (_e, data) => cb(data)),
+  sendTrayIcon: (dataUrl) => ipcRenderer.send('tray:icon-ready', dataUrl),
+
   // i18n
   getI18n: () => ipcRenderer.invoke('i18n:get'),
   setLanguage: (lang) => ipcRenderer.invoke('i18n:setLanguage', lang),
