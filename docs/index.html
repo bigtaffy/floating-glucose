@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>桌面血糖鐘 · FloatingGlucose — 讓血糖永遠在你眼角</title>
+<meta name="description" content="從 Nightscout 即時讀取血糖值，浮動顯示在 macOS 與 Windows 桌面上。給糖友與家長的桌面陪伴工具。免費 · 開源 · 不收集資料。">
+
+<meta property="og:title" content="桌面血糖鐘 · FloatingGlucose">
+<meta property="og:description" content="從 Nightscout 即時讀取血糖值，浮動顯示在 macOS 與 Windows 桌面上">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://bigtaffy.github.io/floating-glucose/">
+<meta property="og:image" content="https://raw.githubusercontent.com/bigtaffy/floating-glucose/main/docs/screenshots/floating-on-desktop.png">
+
+<link rel="icon" type="image/png" href="https://raw.githubusercontent.com/bigtaffy/floating-glucose/main/build/icon.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- floating background blobs -->
+<div class="blobs" aria-hidden="true">
+  <span class="blob blob-1"></span>
+  <span class="blob blob-2"></span>
+  <span class="blob blob-3"></span>
+  <span class="blob blob-4"></span>
+</div>
+
+<nav class="nav">
+  <a href="#" class="nav-logo">
+    <span class="logo-icon">🩸</span>
+    <span>桌面血糖鐘</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features">功能</a>
+    <a href="#how">怎麼用</a>
+    <a href="#download">下載</a>
+    <a href="https://github.com/bigtaffy/floating-glucose" target="_blank" rel="noopener">GitHub ↗</a>
+  </div>
+</nav>
+
+<!-- ============ HERO ============ -->
+<section class="hero">
+  <div class="hero-text">
+    <h1>
+      讓血糖<br>
+      <span class="gradient-text">永遠在你眼角</span>
+    </h1>
+    <p class="hero-subtitle">
+      把 Nightscout 上的血糖值浮在 macOS 與 Windows 桌面，<br>
+      <strong>不用拿手機</strong>，眼角一瞥就知道現在多少。
+    </p>
+    <div class="hero-cta">
+      <a id="primary-download" href="#download" class="btn btn-primary">
+        <span class="btn-icon">⬇</span>
+        <span class="btn-text">偵測中...</span>
+      </a>
+      <a href="#how" class="btn btn-ghost">
+        看怎麼用
+      </a>
+    </div>
+    <div class="hero-trust">
+      <span>✨ 完全免費</span>
+      <span>🔒 不收集資料</span>
+      <span>💻 macOS & Windows</span>
+      <span>🌐 4 種語言</span>
+    </div>
+  </div>
+
+  <div class="hero-art" aria-hidden="true">
+    <div class="desktop-mock">
+      <div class="desktop-bar">
+        <span class="dot dot-r"></span>
+        <span class="dot dot-y"></span>
+        <span class="dot dot-g"></span>
+        <span class="dot-spacer"></span>
+        <span class="menubar-glucose">
+          <span id="hero-menubar-value">120</span>
+          <span id="hero-menubar-arrow">→</span>
+        </span>
+      </div>
+      <div class="desktop-body">
+        <div class="widget-mock" id="hero-widget">
+          <div class="widget-value-line">
+            <span id="hero-value" class="widget-value">120</span><span id="hero-arrow" class="widget-arrow">→</span>
+          </div>
+          <div class="widget-meta">
+            <div><span id="hero-delta">+2</span> mg/dL</div>
+            <div id="hero-age">just now</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ WHY ============ -->
+<section class="why reveal">
+  <div class="container">
+    <h2>還在每 5 分鐘拿手機看血糖嗎？</h2>
+    <div class="why-compare">
+      <div class="why-card why-bad">
+        <div class="why-emoji">😩</div>
+        <div class="why-title">沒有桌面血糖鐘</div>
+        <ul>
+          <li>📱 工作中一直拿手機</li>
+          <li>🔕 鎖屏沒注意到警報</li>
+          <li>⏰ 想看血糖卻找不到手機</li>
+          <li>😵 上班族打卡卡卡卡</li>
+        </ul>
+      </div>
+      <div class="vs">VS</div>
+      <div class="why-card why-good">
+        <div class="why-emoji">😎</div>
+        <div class="why-title">用桌面血糖鐘</div>
+        <ul>
+          <li>👁 眼角一瞥就看到</li>
+          <li>🔔 緊急狀態主動嗶嗶</li>
+          <li>📈 點一下看 4 小時趨勢</li>
+          <li>☕️ 專心工作不被打斷</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FEATURES ============ -->
+<section id="features" class="features reveal">
+  <div class="container">
+    <h2 class="section-title">為糖友與家長設計的功能</h2>
+    <p class="section-subtitle">每一項都是真實使用者反饋打磨出來的</p>
+
+    <div class="features-grid">
+
+      <div class="feature-card feature-color" data-demo="color">
+        <div class="feature-icon">🎨</div>
+        <h3>即時顏色警示</h3>
+        <div class="feature-mini-widget" id="demo-color">
+          <span class="dv-value" id="demo-color-value">120</span>
+          <span class="dv-unit">mg/dL</span>
+        </div>
+        <p>數字依血糖等級自動變色：綠 / 黃 / 紅 / 灰。眼角一瞥就知道狀況。</p>
+        <span class="feature-tip">把滑鼠移上來試試 →</span>
+      </div>
+
+      <div class="feature-card feature-trend">
+        <div class="feature-icon">📈</div>
+        <h3>4 小時趨勢圖</h3>
+        <svg class="feature-svg" id="demo-trend" viewBox="0 0 240 100">
+          <line x1="0" x2="240" y1="35" y2="35" stroke="#ff5252" stroke-dasharray="3 4" opacity="0.4"/>
+          <line x1="0" x2="240" y1="70" y2="70" stroke="#f5d442" stroke-dasharray="3 4" opacity="0.4"/>
+          <path id="demo-trend-path" d="M 5 65 L 30 60 L 55 52 L 80 42 L 105 35 L 130 30 L 155 36 L 180 45 L 205 55 L 230 50"
+            fill="none" stroke="#21D4B4" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p>點擊浮動視窗開啟趨勢圖，含 TIR / 平均 / 最高最低，回診跟醫師討論超有用。</p>
+      </div>
+
+      <div class="feature-card feature-alarm">
+        <div class="feature-icon">🔔</div>
+        <h3>緊急警報音</h3>
+        <div class="alarm-buttons">
+          <button class="btn-mini" data-sound="urgent-low">試聽低血糖</button>
+          <button class="btn-mini" data-sound="urgent-high">試聽高血糖</button>
+        </div>
+        <p>進入緊急狀態時自動發聲。家長半夜小孩低血糖最需要。可關。</p>
+      </div>
+
+      <div class="feature-card feature-lang">
+        <div class="feature-icon">🌐</div>
+        <h3>4 種語言</h3>
+        <div class="lang-demo" id="demo-lang">
+          <span class="lang-current">設定畫面</span>
+        </div>
+        <p>繁中 / 简中 / English / 日本語，依系統語言自動偵測。歡迎協助翻譯！</p>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ HOW ============ -->
+<section id="how" class="how reveal">
+  <div class="container">
+    <h2 class="section-title">三步驟就能用</h2>
+    <p class="section-subtitle">非工程師也能 5 分鐘上手</p>
+
+    <div class="steps">
+
+      <div class="step">
+        <div class="step-number">1</div>
+        <div class="step-content">
+          <h3>把你的 CGM 接上 Nightscout</h3>
+          <p>
+            如果你已經有 NS 站台 → 跳過這步。<br>
+            <strong>歐態 CGM</strong>：歐態 App → 我的 → 小歐生態 → Nightscout 開啟<br>
+            <strong>Dexcom / Libre + xDrip+</strong>：xDrip+ 設定 Cloud upload<br>
+            <strong>沒有 NS</strong>：用 T1NS（台灣社群託管）或自架
+          </p>
+          <a href="https://nightscout.github.io/" target="_blank" rel="noopener" class="step-link">
+            Nightscout 官網 ↗
+          </a>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">2</div>
+        <div class="step-content">
+          <h3>下載桌面血糖鐘</h3>
+          <p>
+            我們已經幫你偵測過你的電腦 — 下面的下載按鈕直接是你要的版本。
+            雙擊執行即可，遇到「無法檢查」/「已損毀」/「SmartScreen」警告都是正常的，
+            因為這 App 沒花錢買簽章。
+          </p>
+          <a href="#download" class="step-link">
+            前往下載區 ↓
+          </a>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="step-number">3</div>
+        <div class="step-content">
+          <h3>填網址 + 密碼 → 看血糖</h3>
+          <p>
+            第一次開啟會自動跳設定畫面。把你的 NS 網址（例 <code>https://09xxxxxx.t1ns.tw/</code>）與密碼填進去，
+            按「測試連線」確認綠燈，再按「驗證並儲存」。
+          </p>
+          <p>
+            血糖值會出現在桌面右上角 — 可滑鼠拖到任何位置，下次開機會記得位置。
+          </p>
+          <img src="screenshots/settings.png" alt="設定畫面" class="step-img" loading="lazy">
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ DOWNLOAD ============ -->
+<section id="download" class="download reveal">
+  <div class="container">
+    <h2 class="section-title">下載</h2>
+    <p class="section-subtitle">
+      最新版本：<strong id="latest-version">載入中...</strong>
+      · <a href="https://github.com/bigtaffy/floating-glucose/releases" target="_blank" rel="noopener">看所有版本 ↗</a>
+    </p>
+
+    <div class="download-grid">
+      <div class="dl-card" id="dl-mac-arm">
+        <div class="dl-platform">🍎</div>
+        <div class="dl-name">macOS · Apple Silicon</div>
+        <div class="dl-hint">M1 / M2 / M3 / M4 系列 Mac</div>
+        <a href="#" class="btn btn-primary dl-btn" data-asset-pattern="arm64\.dmg$">
+          <span class="dl-size">--</span>
+        </a>
+      </div>
+
+      <div class="dl-card" id="dl-mac-intel">
+        <div class="dl-platform">🍎</div>
+        <div class="dl-name">macOS · Intel</div>
+        <div class="dl-hint">2020 年以前的 Mac</div>
+        <a href="#" class="btn btn-primary dl-btn" data-asset-pattern="^FloatingGlucose-\d.+\.dmg$">
+          <span class="dl-size">--</span>
+        </a>
+      </div>
+
+      <div class="dl-card" id="dl-windows">
+        <div class="dl-platform">🪟</div>
+        <div class="dl-name">Windows 10 / 11</div>
+        <div class="dl-hint">x64 系統</div>
+        <a href="#" class="btn btn-primary dl-btn" data-asset-pattern="\.exe$">
+          <span class="dl-size">--</span>
+        </a>
+      </div>
+    </div>
+
+    <details class="install-warnings">
+      <summary>安裝時遇到警告怎麼辦？</summary>
+      <div class="warnings-grid">
+        <div>
+          <h4>🍎 macOS 跳「無法檢查」</h4>
+          <p>在「應用程式」資料夾右鍵 FloatingGlucose → 開啟 → 仍要開啟</p>
+        </div>
+        <div>
+          <h4>🍎 macOS 跳「已損毀」</h4>
+          <p>打開 Terminal 貼：<br><code>xattr -cr /Applications/FloatingGlucose.app</code></p>
+        </div>
+        <div>
+          <h4>🪟 Windows SmartScreen 藍色畫面</h4>
+          <p>點「其他資訊」→「仍要執行」</p>
+        </div>
+        <div>
+          <h4>🪟 移除舊版裝不上新版</h4>
+          <p>下載 <a href="https://github.com/bigtaffy/floating-glucose/raw/main/scripts/uninstall-windows.cmd" target="_blank" rel="noopener">uninstall-windows.cmd</a> 雙擊清乾淨再裝</p>
+        </div>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section id="faq" class="faq reveal">
+  <div class="container">
+    <h2 class="section-title">常見問題</h2>
+
+    <details>
+      <summary>是醫療器材嗎？可以靠它做醫療判斷嗎？</summary>
+      <div class="faq-body">
+        <p><strong>不是醫療器材，不能做任何醫療判斷</strong>。任何劑量計算、緊急處理請以你的 CGM、血糖機、醫師建議為準。本軟體可能因網路、CGM 上傳延遲等原因顯示錯誤或過舊的數值。</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>會把我的血糖傳到第三方嗎？</summary>
+      <div class="faq-body">
+        <p>不會。本軟體唯一的網路連線就是「你的電腦 → 你自己的 Nightscout 網址」，跟你用瀏覽器打開 NS 一樣。完全沒有 telemetry、分析、廣告。設定（含 NS 密碼）只存在你的電腦本機。</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>免費嗎？開源嗎？</summary>
+      <div class="faq-body">
+        <p>是。MIT License。所有程式碼公開在 <a href="https://github.com/bigtaffy/floating-glucose" target="_blank" rel="noopener">GitHub</a>，你或你信任的工程師朋友可以審查每一行。</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>我家有兩個糖友，可以一台電腦同時看嗎？</summary>
+      <div class="faq-body">
+        <p>目前版本一台電腦只能設一組 NS。<strong>多用戶版正在開發中</strong>，預計近期推出，每人一行同時顯示。</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>支援哪些 CGM？</summary>
+      <div class="faq-body">
+        <p>App 本身不直接跟 CGM 通訊，所以<strong>任何能上傳到 Nightscout 的 CGM 都支援</strong>：歐態、Dexcom（透過 xDrip+）、Libre（透過 xDrip+ / Diabox）、Medtronic 700 等。</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>怎麼移除？</summary>
+      <div class="faq-body">
+        <p><strong>macOS</strong>：應用程式裡拖到垃圾桶。</p>
+        <p><strong>Windows</strong>：設定 → 應用程式 → 解除安裝。如果跳「Installer integrity check has failed」表示舊版 uninstaller 被防毒改壞了，下載 <a href="https://github.com/bigtaffy/floating-glucose/raw/main/scripts/uninstall-windows.cmd" target="_blank" rel="noopener">完整移除工具</a> 雙擊清乾淨。</p>
+      </div>
+    </details>
+
+    <details>
+      <summary>怎麼回報 bug 或建議功能？</summary>
+      <div class="faq-body">
+        <p>到 <a href="https://github.com/bigtaffy/floating-glucose/issues/new/choose" target="_blank" rel="noopener">GitHub Issues</a> 開單。<strong>請不要在 Issue 內貼你的 NS 完整網址或密碼</strong>。</p>
+      </div>
+    </details>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer class="footer">
+  <div class="container">
+    <div class="footer-content">
+      <div class="footer-brand">
+        <strong>🩸 桌面血糖鐘</strong>
+        <p>Cross-platform desktop blood glucose widget for Nightscout</p>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/bigtaffy/floating-glucose" target="_blank" rel="noopener">GitHub</a>
+        <a href="https://github.com/bigtaffy/floating-glucose/issues" target="_blank" rel="noopener">回報問題</a>
+        <a href="https://github.com/bigtaffy/floating-glucose/blob/main/CHANGELOG.md" target="_blank" rel="noopener">更新紀錄</a>
+        <a href="https://github.com/bigtaffy/floating-glucose/blob/main/LICENSE" target="_blank" rel="noopener">License (MIT)</a>
+      </div>
+    </div>
+    <div class="footer-disclaimer">
+      <strong>⚠️ 免責聲明：</strong>本軟體僅供資訊參考，<strong>不是醫療器材</strong>，不能用於診斷、治療或預防疾病。任何醫療決策請依你的 CGM 讀值與醫師建議為準。
+    </div>
+  </div>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
