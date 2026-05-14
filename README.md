@@ -6,6 +6,10 @@
 > *Cross-platform desktop blood glucose widget for Nightscout users.*
 > *Available on macOS and Windows · 繁中 / 简中 / English / 日本語.*
 
+### 👉 想直接安裝？到我們的網站一鍵下載
+
+**[🩸 bigtaffy.github.io/floating-glucose](https://bigtaffy.github.io/floating-glucose/)** — 自動偵測你的作業系統、教學步驟、警報音試聽，糖友友善。
+
 ## 🎯 功能總覽
 
 | 類別 | 功能 |
