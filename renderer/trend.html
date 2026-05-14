@@ -55,7 +55,10 @@
 <body>
   <div class="container">
     <header>
-      <h1 id="title">Glucose Trend</h1>
+      <div style="display:flex;gap:14px;align-items:center;">
+        <h1 id="title">Glucose Trend</h1>
+        <select id="profileSelect" style="display:none;background:#2a2a2a;color:#eee;border:1px solid #444;border-radius:4px;padding:4px 8px;font-size:12px;"></select>
+      </div>
       <div class="stats" id="stats"></div>
     </header>
     <div class="chart-wrap">
@@ -226,9 +229,37 @@
     updatedAtEl.textContent = fmt('trend.updatedAt', { time: fmtTime(now_d) });
   }
 
+  let currentProfileId = null;
+
+  async function loadProfiles() {
+    try {
+      const profiles = await window.api.listProfiles();
+      const sel = document.getElementById('profileSelect');
+      sel.innerHTML = '';
+      if (!profiles || profiles.length === 0) return;
+      profiles.forEach(p => {
+        const opt = document.createElement('option');
+        opt.value = p.id;
+        opt.textContent = p.name || '(unnamed)';
+        sel.appendChild(opt);
+      });
+      if (!currentProfileId || !profiles.find(p => p.id === currentProfileId)) {
+        currentProfileId = profiles[0].id;
+      }
+      sel.value = currentProfileId;
+      sel.style.display = profiles.length > 1 ? '' : 'none';
+      sel.onchange = () => {
+        currentProfileId = sel.value;
+        refresh();
+      };
+    } catch (e) { console.error('loadProfiles failed', e); }
+  }
+
   async function refresh() {
     try {
-      const data = await window.api.fetchTrend();
+      await loadProfiles();
+      const data = await window.api.fetchTrend(currentProfileId);
+      currentProfileId = data.profileId;
       render(data);
     } catch (e) {
       errorEl.textContent = (e && e.message) || String(e);
@@ -245,10 +276,26 @@
   window.api.onLanguageChanged((d) => { bundle = d.bundle; applyI18n(); refresh(); });
   window.addEventListener('resize', () => refresh());
 
+  // If user re-opens the trend window for a different profile while it's
+  // already open, switch to that profile.
+  if (window.api.onTrendSetProfile) {
+    window.api.onTrendSetProfile((profileId) => {
+      currentProfileId = profileId;
+      refresh();
+    });
+  }
+
   (async () => {
     const i = await window.api.getI18n();
     bundle = i.bundle;
     applyI18n();
+
+    // Use the profile the user clicked on (passed via main process)
+    try {
+      const initial = await window.api.getInitialTrendProfileId();
+      if (initial) currentProfileId = initial;
+    } catch (_) {}
+
     await refresh();
     // Auto-refresh every minute
     setInterval(refresh, 60 * 1000);

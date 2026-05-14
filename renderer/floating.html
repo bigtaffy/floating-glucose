@@ -16,7 +16,6 @@
   body { display: inline-block; }
   .wrap {
     display: inline-block;
-    text-align: right;
     padding: 8px 14px;
     text-shadow:
       0 0 5px rgba(0,0,0,0.95),
@@ -26,45 +25,74 @@
     background: rgba(0,0,0,0.4);
     border-radius: 10px;
     margin: 4px;
-    min-width: 120px;
+    min-width: 130px;
     transition: background 0.3s;
     white-space: nowrap;
   }
-  /* When glucose data has loaded, fade backdrop to fully transparent so the
-     widget feels like text floating on the desktop (original FloatingGlucose UX).
-     Text remains legible thanks to the heavy text-shadow above. */
-  .wrap.has-data { background: rgba(0,0,0,0); }
-  .wrap.error    { background: rgba(120,0,0,0.45); }
-  .wrap.no-config {
-    background: rgba(60,60,60,0.55);
+  .wrap.has-data       { background: rgba(0,0,0,0); }
+  .wrap.has-data.multi { background: rgba(0,0,0,0.18); padding: 10px 14px; }
+  .wrap.needs-config {
+    background: rgba(60,60,60,0.6);
     text-align: center;
     font-size: 12px;
+    padding: 12px 18px;
+    color: #fff;
   }
-  .value-line {
-    font-weight: 700;
-    font-size: 32px;
+
+  /* per-profile row */
+  .row {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    align-items: center;
+  }
+  .row + .row { margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.18); }
+  .row .name {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.9;
+    /* No max-width — let names extend, the parent grid will grow the column.
+       The floating window itself will resize-to-content via ResizeObserver. */
+    white-space: nowrap;
+  }
+  .row .name .name-hint {
+    font-size: 10px;
+    opacity: 0.7;
+    font-weight: 400;
+    margin-left: 4px;
+  }
+  .row.needs-url .value-line { color: #aaa; font-size: 12px; font-weight: 500; }
+  .row .value-block {
+    text-align: right;
     line-height: 1;
   }
-  .arrow { margin-left: 4px; }
-  .meta { font-size: 12px; opacity: 0.9; margin-top: 2px; line-height: 1.2; }
-  .in-range    .value-line { color: #6ee36b; }
-  .high        .value-line { color: #f5d442; }
-  .urgent-high .value-line { color: #ff5252; }
-  .low         .value-line { color: #f5d442; }
-  .urgent-low  .value-line { color: #ff5252; }
-  .stale-warn  .value-line { color: #bbbbbb; }
-  .stale-urgent .value-line { color: #888888; }
-  .error       .value-line { color: #ff7070; font-size: 16px; }
-  .value-line {
-    -webkit-app-region: no-drag;
-    cursor: pointer;
-  }
-  .clickable { -webkit-app-region: no-drag; cursor: pointer; }
+  .row .value-line { font-weight: 700; -webkit-app-region: no-drag; cursor: pointer; }
+  .row .arrow { margin-left: 4px; }
+  .row .meta { font-size: 11px; opacity: 0.88; margin-top: 3px; line-height: 1.25; }
+
+  /* status colours apply to .value-line inside .row */
+  .row.in-range     .value-line { color: #6ee36b; }
+  .row.in-range     .arrow      { color: #6ee36b; }
+  .row.high         .value-line { color: #f5d442; }
+  .row.high         .arrow      { color: #f5d442; }
+  .row.urgent-high  .value-line { color: #ff5252; }
+  .row.urgent-high  .arrow      { color: #ff5252; }
+  .row.low          .value-line { color: #f5d442; }
+  .row.low          .arrow      { color: #f5d442; }
+  .row.urgent-low   .value-line { color: #ff5252; }
+  .row.urgent-low   .arrow      { color: #ff5252; }
+  .row.stale-warn   .value-line { color: #bbbbbb; }
+  .row.stale-urgent .value-line { color: #888888; }
+  .row.error        .value-line { color: #ff7070; font-size: 14px; }
+
+  /* single-profile mode hides name, makes value bigger */
+  .single .name { display: none; }
+  .single .row { grid-template-columns: 1fr; text-align: right; }
+
   .menu-btn {
     position: absolute;
     top: 2px; left: 2px;
     width: 14px; height: 14px;
-    background: rgba(255,255,255,0.0);
     color: rgba(255,255,255,0.5);
     font-size: 10px;
     text-align: center;
@@ -78,37 +106,20 @@
 </head>
 <body>
   <div id="menuBtn" class="menu-btn" title="Settings">⚙</div>
-  <div id="container" class="wrap in-range">
-    <div class="value-line">
-      <span id="value">---</span><span id="arrow" class="arrow"></span>
-    </div>
-    <div class="meta">
-      <div><span id="delta"></span> <span id="units"></span></div>
-      <div id="age">loading...</div>
-    </div>
+  <div id="container" class="wrap needs-config">
+    <div id="empty-msg">loading...</div>
   </div>
 <script>
   const container = document.getElementById('container');
-  const valueEl = document.getElementById('value');
-  const arrowEl = document.getElementById('arrow');
-  const deltaEl = document.getElementById('delta');
-  const unitsEl = document.getElementById('units');
-  const ageEl = document.getElementById('age');
   const menuBtn = document.getElementById('menuBtn');
-
   let bundle = {};
+  let fontSize = 28;
 
   function fmt(key, params) {
     let s = bundle[key] || key;
     if (params) s = s.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? params[k] : `{${k}}`));
     return s;
   }
-
-  function applyStaticI18n() {
-    menuBtn.title = fmt('floating.settingsTooltip');
-    if (!container.dataset.hasData) ageEl.textContent = fmt('floating.loading');
-  }
-
   function ageText(n) {
     if (n <= 0) return fmt('floating.justNow');
     if (n === 1) return fmt('floating.minuteAgo', { n });
@@ -120,16 +131,12 @@
     window.api.openSettings();
   });
 
-  // Click on the glucose value opens the trend window
-  document.querySelector('.value-line').addEventListener('click', (e) => {
-    e.stopPropagation();
-    window.api.openTrend();
-  });
-
-  // Sound alarm: 3 short beeps via Web Audio API. Frequency differs by status
-  // (urgent-low = lower pitch / more "alarming", urgent-high = higher pitch).
+  // Sound alarms — frequency bumped per profile index so user can hear which
+  // person is alarming. Octave-like spacing (semitone-ish jumps).
   let audioCtx = null;
-  function playBeeps(freq, count = 3, duration = 0.25, gap = 0.15) {
+  const HIGH_TONES = [880, 988, 1109, 1245, 1397]; // A5, B5, C#6, D#6, F6
+  const LOW_TONES  = [440, 494,  554,  622,  698];
+  function playBeeps(freq, count, duration = 0.2, gap = 0.12) {
     try {
       audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
@@ -148,46 +155,86 @@
         osc.start(start);
         osc.stop(start + duration + 0.05);
       }
-    } catch (e) {
-      console.error('Beep failed:', e);
-    }
+    } catch (e) { console.error('Beep failed:', e); }
   }
   window.api.onPlayAlarm((data) => {
-    if (data.status === 'urgent-low') playBeeps(440, 4, 0.2, 0.1);
-    else playBeeps(880, 3, 0.18, 0.12);
+    const idx = (data.profileIndex || 0) % HIGH_TONES.length;
+    if (data.status === 'urgent-low') playBeeps(LOW_TONES[idx], 4, 0.2, 0.1);
+    else playBeeps(HIGH_TONES[idx], 3, 0.18, 0.12);
   });
 
-  function setStatus(cls) {
-    container.className = 'wrap ' + cls;
+  function renderRow(p, isOnly) {
+    const tr = document.createElement('div');
+    tr.className = 'row';
+    const displayName = p.name || fmt('floating.unnamed') || '(unnamed)';
+
+    if (p.needsUrl) {
+      tr.classList.add('needs-url');
+      tr.innerHTML = `
+        <div class="name">${escapeHtml(displayName)}</div>
+        <div class="value-block">
+          <div class="value-line">${fmt('floating.needsUrlRow')}</div>
+        </div>`;
+      tr.querySelector('.value-line').addEventListener('click', (e) => {
+        e.stopPropagation();
+        window.api.openSettings();
+      });
+      return tr;
+    }
+
+    if (p.error) {
+      tr.classList.add('error');
+      tr.innerHTML = `
+        <div class="name">${escapeHtml(displayName)}</div>
+        <div class="value-block">
+          <div class="value-line">ERR</div>
+          <div class="meta">${escapeHtml((p.error || '').slice(0, 32))}</div>
+        </div>`;
+    } else {
+      tr.classList.add(p.status || 'in-range');
+      const sizePx = isOnly ? fontSize : Math.max(18, Math.round(fontSize * 0.7));
+      tr.innerHTML = `
+        <div class="name">${escapeHtml(displayName)}</div>
+        <div class="value-block">
+          <div class="value-line" style="font-size:${sizePx}px;">
+            <span>${p.value}</span><span class="arrow">${p.arrow || ''}</span>
+          </div>
+          <div class="meta">${p.delta} mg/dL · ${ageText(p.ageMin)}</div>
+        </div>`;
+    }
+    tr.querySelector('.value-line').addEventListener('click', (e) => {
+      e.stopPropagation();
+      window.api.openTrend(p.profileId);
+    });
+    return tr;
   }
 
-  window.api.onGlucoseUpdate((d) => {
-    container.dataset.hasData = '1';
-    valueEl.style.fontSize = (d.fontSize || 32) + 'px';
-    valueEl.textContent = d.value;
-    arrowEl.textContent = d.arrow || '';
-    deltaEl.textContent = d.delta;
-    unitsEl.textContent = d.units;
-    ageEl.textContent = ageText(d.ageMin);
-    container.className = 'wrap has-data ' + d.status;
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+
+  function render(data) {
+    fontSize = data.fontSize || 28;
+    const list = data.profiles || [];
+    if (list.length === 0 || data.needsSetup) {
+      container.className = 'wrap needs-config';
+      container.innerHTML = `<div>${fmt('floating.needsSetup')}</div>`;
+      window.api.reportContentSize({ width: container.offsetWidth + 8, height: container.offsetHeight + 8 });
+      return;
+    }
+    const isSingle = list.length === 1;
+    container.className = 'wrap has-data' + (isSingle ? ' single' : ' multi');
+    container.innerHTML = '';
+    list.forEach(p => container.appendChild(renderRow(p, isSingle)));
+  }
+
+  window.api.onGlucoseUpdateAll((data) => {
+    render(data);
   });
 
-  window.api.onGlucoseError((d) => {
-    valueEl.style.fontSize = '16px';
-    valueEl.textContent = fmt('floating.error');
-    arrowEl.textContent = '';
-    deltaEl.textContent = '';
-    unitsEl.textContent = '';
-    ageEl.textContent = (d.message || '').slice(0, 40);
-    container.className = 'wrap error';
-  });
-
-  window.api.onLanguageChanged((data) => {
-    bundle = data.bundle;
-    applyStaticI18n();
-  });
-
-  // Notify main process of rendered content size so window resizes to fit.
+  // Notify main of rendered size so window can resize to fit
   let lastReported = { w: 0, h: 0 };
   function reportSize() {
     const w = container.offsetWidth + 8;
@@ -196,9 +243,18 @@
     lastReported = { w, h };
     window.api.reportContentSize({ width: w, height: h });
   }
-  const ro = new ResizeObserver(() => reportSize());
-  ro.observe(container);
-  window.addEventListener('load', reportSize);
+  new ResizeObserver(() => reportSize()).observe(container);
+
+  function applyStaticI18n() {
+    menuBtn.title = fmt('floating.settingsTooltip');
+    const empty = document.getElementById('empty-msg');
+    if (empty) empty.textContent = fmt('floating.loading');
+  }
+
+  window.api.onLanguageChanged((data) => {
+    bundle = data.bundle;
+    applyStaticI18n();
+  });
 
   (async () => {
     const i = await window.api.getI18n();
