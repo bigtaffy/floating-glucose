@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-05-14
+
+### Added — 多用戶版
+
+- **多 NS 帳號支援** — 一台電腦可同時監測多個 Nightscout 站台（家長同時看自己跟小孩、夫妻共用一台電腦等）
+- **每個帳號可命名** — 例如「我自己」、「小明」、「爸爸」，浮動視窗會顯示名稱
+- **浮動視窗多人垂直堆疊** — 每人一列，依名稱排序，自動依字體大小調整視窗高度
+- **macOS 選單列同時顯示多人** — 例：`我自己 142 → · 小明 78 ↓`
+- **每個帳號獨立的警報閾值** — 小孩跟成人的目標範圍可以不同（urgent high/low、stale 分鐘數都 per-profile）
+- **警報音依 profile 變調** — 不同帳號用不同音高（A5, B5, C#6...），不用看畫面就能聽出是誰
+- **警報通知帶名稱** — 通知標題會顯示「[小明] 緊急低血糖」，多人狀況下立刻知道誰
+- **趨勢圖視窗 profile 切換** — 上方下拉選單切換要看哪個人的趨勢
+- **設定畫面 profile 管理** — 新增 / 編輯 / 啟用停用 / 刪除，每個帳號獨立的測試連線
+- **v1.x → v2.0 自動遷移** — 舊版單一 NS 設定會自動轉成第一個 profile（名稱 `主要`），所有資料保留，可重新命名
+
+### Changed
+
+- 資料模型：`config.json` 從扁平結構改為 `profiles[]` 陣列
+- IPC API：`config:test` → `profile:test`，`glucose-update` 事件 → `glucose-update-all`（多 profile 批次）
+- `fetchTrend` 加 `profileId` 參數
+- 警報觸發追蹤：`previousStatus` 單一變數 → `previousStatusByProfile` Map
+
+### Migration Notes
+
+> v1.x 自動更新到 v2.0.0 完全無痛 — 你之前設好的 NS 帳號會自動變成「主要」profile，繼續正常運作。想加第二人？打開設定 → 監測對象 → 「+ 新增 NS 帳號」。
+> 若你只是個人單用，介面跟 v1.x 一模一樣（浮動視窗單列、無 profile 名稱），不會被多人功能干擾。
+
 ## [1.1.1] - 2026-05-13
 
 ### Fixed
@@ -130,7 +157,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v1.1.1...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v2.0.0
 [1.1.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.1.1
 [1.1.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.1.0
 [1.0.4]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.0.4

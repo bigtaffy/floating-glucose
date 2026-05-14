@@ -8,16 +8,27 @@ const { autoUpdater } = require('electron-updater');
 const i18n = require('./i18n');
 
 const CONFIG_PATH = path.join(app.getPath('userData'), 'config.json');
-const DEFAULT_CONFIG = {
+
+// Per-profile fields. Each profile represents one Nightscout site.
+const DEFAULT_PROFILE_TEMPLATE = {
+  id: '',
+  name: '',
   nsUrl: '',
   token: '',
-  units: 'mg/dL',
   urgentHigh: 200,
   high: 150,
   low: 85,
   urgentLow: 68,
   staleWarn: 15,
   staleUrgent: 30,
+  enabled: true,
+  color: '#6ee36b'
+};
+
+// Top-level shared settings.
+const DEFAULT_CONFIG = {
+  profiles: [],
+  units: 'mg/dL',
   windowX: null,
   windowY: null,
   fontSize: 28,
@@ -36,17 +47,62 @@ let settingsWindow = null;
 let trendWindow = null;
 let tray = null;
 let refreshTimer = null;
-let previousStatus = null;
+// Track previous classification per profile so we only fire alarms on
+// transitions (not on every refresh while still in urgent state).
+const previousStatusByProfile = new Map();
+
+function generateId() {
+  return 'p-' + crypto.randomBytes(8).toString('hex');
+}
+
+function newProfile(overrides = {}) {
+  return { ...DEFAULT_PROFILE_TEMPLATE, id: generateId(), ...overrides };
+}
+
+/**
+ * v1 → v2 migration: collapse the flat single-NS config into a single
+ * profile inside the new profiles[] array. Preserves user's data.
+ */
+function migrateIfNeeded(raw) {
+  if (raw && Array.isArray(raw.profiles)) return raw;
+  if (!raw || typeof raw !== 'object') return null;
+
+  const legacy = newProfile({
+    name: '主要',
+    nsUrl: raw.nsUrl || '',
+    token: raw.token || '',
+    urgentHigh: raw.urgentHigh ?? 200,
+    high: raw.high ?? 150,
+    low: raw.low ?? 85,
+    urgentLow: raw.urgentLow ?? 68,
+    staleWarn: raw.staleWarn ?? 15,
+    staleUrgent: raw.staleUrgent ?? 30,
+    enabled: true
+  });
+
+  // Strip legacy keys, keep shared ones
+  const { nsUrl, token, urgentHigh, high, low, urgentLow, staleWarn, staleUrgent, ...rest } = raw;
+  return { ...rest, profiles: [legacy] };
+}
 
 function loadConfig() {
-  let cfg = { ...DEFAULT_CONFIG };
+  let cfg;
   try {
     if (fs.existsSync(CONFIG_PATH)) {
-      cfg = { ...DEFAULT_CONFIG, ...JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')) };
+      cfg = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
+      cfg = migrateIfNeeded(cfg);
     }
   } catch (e) {
     console.error('Failed to load config', e);
   }
+  cfg = { ...DEFAULT_CONFIG, ...(cfg || {}) };
+
+  // Ensure profiles is always an array, even if migration produced nothing
+  if (!Array.isArray(cfg.profiles)) cfg.profiles = [];
+
+  // Ensure every profile has an id (helps with reorder/edit safety)
+  cfg.profiles = cfg.profiles.map(p => ({ ...DEFAULT_PROFILE_TEMPLATE, ...p, id: p.id || generateId() }));
+
   if (!cfg.language || !i18n.SUPPORTED.includes(cfg.language)) {
     cfg.language = i18n.detectSystemLanguage();
   }
@@ -81,14 +137,13 @@ function fetchJson(urlStr) {
   });
 }
 
-async function fetchGlucose(cfg) {
-  if (!cfg.nsUrl) throw new Error('Nightscout URL not configured');
-  const base = cfg.nsUrl.replace(/\/+$/, '');
+async function fetchGlucoseForProfile(profile) {
+  if (!profile.nsUrl) throw new Error('Nightscout URL not configured');
+  const base = profile.nsUrl.replace(/\/+$/, '');
   let url = `${base}/api/v1/entries.json?count=2`;
-  if (cfg.token) {
-    const hash = crypto.createHash('sha1').update(cfg.token).digest('hex');
-    url += `&secret=${hash}`;
-    url += `&token=${encodeURIComponent(cfg.token)}`;
+  if (profile.token) {
+    const hash = crypto.createHash('sha1').update(profile.token).digest('hex');
+    url += `&secret=${hash}&token=${encodeURIComponent(profile.token)}`;
   }
   const data = await fetchJson(url);
   if (!Array.isArray(data) || data.length === 0) throw new Error('No entries');
@@ -108,13 +163,13 @@ const DIRECTION_ARROW = {
   'RATE OUT OF RANGE': '⇕'
 };
 
-function classify(sgv, ageMin, cfg) {
-  if (ageMin >= cfg.staleUrgent) return 'stale-urgent';
-  if (ageMin >= cfg.staleWarn) return 'stale-warn';
-  if (sgv >= cfg.urgentHigh) return 'urgent-high';
-  if (sgv >= cfg.high) return 'high';
-  if (sgv <= cfg.urgentLow) return 'urgent-low';
-  if (sgv <= cfg.low) return 'low';
+function classify(sgv, ageMin, profile) {
+  if (ageMin >= profile.staleUrgent) return 'stale-urgent';
+  if (ageMin >= profile.staleWarn) return 'stale-warn';
+  if (sgv >= profile.urgentHigh) return 'urgent-high';
+  if (sgv >= profile.high) return 'high';
+  if (sgv <= profile.urgentLow) return 'urgent-low';
+  if (sgv <= profile.low) return 'low';
   return 'in-range';
 }
 
@@ -123,53 +178,87 @@ function updateTrayTitle(text) {
   try { tray.setTitle(text || ''); } catch (_) {}
 }
 
-function handleStateTransition(newStatus, ageMin, sgv, cfg) {
+/**
+ * Fire sound and OS notifications for a profile that just changed state.
+ * Frequency bump per profile index so the user can hear which person is
+ * alarming (decision 2: option B).
+ */
+function handleStateTransition(profile, profileIndex, newStatus, ageMin, sgv, cfg) {
   const lang = cfg.language;
-  const wasUrgent = previousStatus === 'urgent-high' || previousStatus === 'urgent-low';
-  const wasStale = previousStatus === 'stale-warn' || previousStatus === 'stale-urgent';
-  const isUrgent = newStatus === 'urgent-high' || newStatus === 'urgent-low';
-  const isStale = newStatus === 'stale-warn' || newStatus === 'stale-urgent';
+  const prev = previousStatusByProfile.get(profile.id);
+  const wasUrgent = prev === 'urgent-high' || prev === 'urgent-low';
+  const wasStale  = prev === 'stale-warn' || prev === 'stale-urgent';
+  const isUrgent  = newStatus === 'urgent-high' || newStatus === 'urgent-low';
+  const isStale   = newStatus === 'stale-warn' || newStatus === 'stale-urgent';
 
-  // Sound alarm: entered urgent from non-urgent state
   if (cfg.enableSoundAlarms !== false && isUrgent && !wasUrgent) {
     if (floatingWindow && !floatingWindow.isDestroyed()) {
-      floatingWindow.webContents.send('play-alarm', { status: newStatus });
+      floatingWindow.webContents.send('play-alarm', {
+        status: newStatus,
+        profileIndex,
+        profileName: profile.name
+      });
     }
   }
 
-  // CGM disconnect notification: entered stale state from fresh data
   if (cfg.enableStaleNotification !== false && isStale && !wasStale) {
     try {
       new Notification({
         title: i18n.t(lang, 'alert.cgmDisconnectedTitle'),
-        body: i18n.t(lang, 'alert.cgmDisconnectedBody', { minutes: ageMin })
+        body: i18n.t(lang, 'alert.cgmDisconnectedBodyNamed', { name: profile.name, minutes: ageMin })
       }).show();
-    } catch (e) {
-      console.error('Notification failed:', e);
-    }
+    } catch (e) { console.error('Notification failed:', e); }
   }
 
-  // Urgent-state system notification (in addition to sound) for OS-level alert
   if (cfg.enableStaleNotification !== false && isUrgent && !wasUrgent) {
-    const key = newStatus === 'urgent-low' ? 'alert.urgentLowBody' : 'alert.urgentHighBody';
     const titleKey = newStatus === 'urgent-low' ? 'alert.urgentLowTitle' : 'alert.urgentHighTitle';
+    const bodyKey  = newStatus === 'urgent-low' ? 'alert.urgentLowBodyNamed' : 'alert.urgentHighBodyNamed';
     try {
       new Notification({
         title: i18n.t(lang, titleKey),
-        body: i18n.t(lang, key, { value: sgv, units: cfg.units })
+        body: i18n.t(lang, bodyKey, { name: profile.name, value: sgv, units: cfg.units })
       }).show();
-    } catch (e) {
-      console.error('Notification failed:', e);
-    }
+    } catch (e) { console.error('Notification failed:', e); }
   }
 
-  previousStatus = newStatus;
+  previousStatusByProfile.set(profile.id, newStatus);
 }
 
-async function refresh() {
+/**
+ * Refresh all enabled profiles in parallel and push a batched update
+ * to the floating window. Also updates menu-bar title and triggers
+ * per-profile alarm transitions.
+ */
+async function refreshAll() {
   const cfg = loadConfig();
-  try {
-    const entries = await fetchGlucose(cfg);
+  const profiles = cfg.profiles.filter(p => p.enabled && p.nsUrl);
+
+  if (profiles.length === 0) {
+    if (floatingWindow && !floatingWindow.isDestroyed()) {
+      floatingWindow.webContents.send('glucose-update-all', {
+        profiles: [],
+        units: cfg.units,
+        fontSize: cfg.fontSize,
+        needsSetup: true
+      });
+    }
+    if (cfg.showInMenuBar) updateTrayTitle('');
+    return;
+  }
+
+  const results = await Promise.allSettled(profiles.map(p => fetchGlucoseForProfile(p)));
+
+  const updates = results.map((r, i) => {
+    const profile = profiles[i];
+    if (r.status === 'rejected') {
+      return {
+        profileId: profile.id,
+        name: profile.name,
+        color: profile.color,
+        error: r.reason?.message || String(r.reason)
+      };
+    }
+    const entries = r.value;
     const latest = entries[0];
     const prev = entries[1];
     const sgv = latest.sgv;
@@ -178,43 +267,60 @@ async function refresh() {
     const display = cfg.units === 'mmol/L' ? (sgv / 18).toFixed(1) : String(sgv);
     const deltaDisplay = cfg.units === 'mmol/L' ? (delta / 18).toFixed(1) : String(delta);
     const arrow = DIRECTION_ARROW[latest.direction] || '';
-    const status = classify(sgv, ageMin, cfg);
-    const payload = {
+    const status = classify(sgv, ageMin, profile);
+    return {
+      profileId: profile.id,
+      name: profile.name,
+      color: profile.color,
       value: display,
       arrow,
       delta: (delta >= 0 ? '+' : '') + deltaDisplay,
       ageMin,
-      units: cfg.units,
       status,
-      fontSize: cfg.fontSize
+      sgvRaw: sgv
     };
-    if (floatingWindow && !floatingWindow.isDestroyed()) {
-      floatingWindow.webContents.send('glucose-update', payload);
-    }
-    if (cfg.showInMenuBar) {
-      updateTrayTitle(`${display}${arrow ? ' ' + arrow : ''}`);
-    } else {
-      updateTrayTitle('');
-    }
-    handleStateTransition(status, ageMin, sgv, cfg);
-  } catch (e) {
-    if (floatingWindow && !floatingWindow.isDestroyed()) {
-      floatingWindow.webContents.send('glucose-error', { message: e.message, fontSize: cfg.fontSize });
-    }
-    if (cfg.showInMenuBar) updateTrayTitle('--');
+  });
+
+  if (floatingWindow && !floatingWindow.isDestroyed()) {
+    floatingWindow.webContents.send('glucose-update-all', {
+      profiles: updates,
+      units: cfg.units,
+      fontSize: cfg.fontSize
+    });
+  }
+
+  if (cfg.showInMenuBar) {
+    const trayParts = updates
+      .filter(u => !u.error)
+      .map(u => {
+        const prefix = profiles.length > 1 ? `${u.name} ` : '';
+        return `${prefix}${u.value}${u.arrow ? ' ' + u.arrow : ''}`;
+      });
+    updateTrayTitle(trayParts.join(' · ') || '--');
+  }
+
+  // Process state transitions for alarms / notifications
+  updates.forEach((u, i) => {
+    if (u.error) return;
+    handleStateTransition(profiles[i], i, u.status, u.ageMin, u.sgvRaw, cfg);
+  });
+
+  // Clean up state for profiles that no longer exist
+  const validIds = new Set(profiles.map(p => p.id));
+  for (const id of Array.from(previousStatusByProfile.keys())) {
+    if (!validIds.has(id)) previousStatusByProfile.delete(id);
   }
 }
 
 function scheduleRefresh() {
   if (refreshTimer) clearInterval(refreshTimer);
   const cfg = loadConfig();
-  refreshTimer = setInterval(refresh, Math.max(15, cfg.refreshSec) * 1000);
-  refresh();
+  refreshTimer = setInterval(refreshAll, Math.max(15, cfg.refreshSec) * 1000);
+  refreshAll();
 }
 
 function applyVisibility() {
   const cfg = loadConfig();
-
   if (cfg.showFloating) {
     if (!floatingWindow || floatingWindow.isDestroyed()) {
       createFloatingWindow();
@@ -240,8 +346,8 @@ function createFloatingWindow() {
   const defaultY = display.workArea.y + 20;
 
   floatingWindow = new BrowserWindow({
-    width: 200,
-    height: 90,
+    width: 240,
+    height: 110,
     x: cfg.windowX ?? defaultX,
     y: cfg.windowY ?? defaultY,
     frame: false,
@@ -279,8 +385,8 @@ function openTrend() {
     return;
   }
   trendWindow = new BrowserWindow({
-    width: 640,
-    height: 380,
+    width: 720,
+    height: 420,
     title: 'Glucose Trend',
     center: true,
     show: false,
@@ -308,8 +414,8 @@ function openSettings() {
     return;
   }
   settingsWindow = new BrowserWindow({
-    width: 520,
-    height: 640,
+    width: 600,
+    height: 720,
     title: 'Glucose Settings',
     center: true,
     show: false,
@@ -338,10 +444,7 @@ function makeTrayIcon() {
       const img = nativeImage.createFromPath(trayPath);
       if (img && !img.isEmpty()) return img;
     }
-  } catch (e) {
-    console.error('Failed to load tray icon from', trayPath, e);
-  }
-  // Fallback: tiny white dot bitmap so the app still functions if assets missing.
+  } catch (e) { console.error('Tray icon load failed:', e); }
   const w = 16, h = 16;
   const buf = Buffer.alloc(w * h * 4);
   for (let y = 0; y < h; y++) {
@@ -359,27 +462,43 @@ function makeTrayIcon() {
 function buildTray() {
   try {
     if (!tray) {
-      const icon = makeTrayIcon();
-      tray = new Tray(icon);
+      tray = new Tray(makeTrayIcon());
     }
-    const lang = loadConfig().language;
+    const cfg = loadConfig();
+    const lang = cfg.language;
     tray.setToolTip(i18n.t(lang, 'app.name'));
+
+    // Submenu of profiles for trend window
+    const profileTrendItems = cfg.profiles
+      .filter(p => p.enabled && p.nsUrl)
+      .map(p => ({ label: p.name, click: () => { openTrend(); /* trend window picks its own default */ } }));
+
     const menu = Menu.buildFromTemplate([
-      { label: i18n.t(lang, 'tray.refresh'), click: refresh },
+      { label: i18n.t(lang, 'tray.refresh'), click: refreshAll },
       { label: i18n.t(lang, 'tray.trend'), click: openTrend },
       { label: i18n.t(lang, 'tray.settings'), click: openSettings },
       { label: i18n.t(lang, 'tray.checkUpdate'), click: () => checkForUpdates(false) },
       { type: 'separator' },
       { label: `v${app.getVersion()}`, enabled: false },
       { type: 'separator' },
-      { label: i18n.t(lang, 'tray.quit'), click: () => { app.quit(); } }
+      { label: i18n.t(lang, 'tray.quit'), click: () => app.quit() }
     ]);
     tray.setContextMenu(menu);
     tray.on('click', () => openSettings());
-  } catch (e) {
-    console.error('Failed to build tray:', e);
-  }
+  } catch (e) { console.error('Failed to build tray:', e); }
 }
+
+function broadcastLanguage() {
+  const lang = loadConfig().language;
+  const bundle = i18n.getBundle(lang);
+  const payload = { lang, bundle };
+  [floatingWindow, settingsWindow, trendWindow].forEach(w => {
+    if (w && !w.isDestroyed()) w.webContents.send('language-changed', payload);
+  });
+  buildTray();
+}
+
+// ===== Auto-updater =====
 
 let updateCheckSilent = true;
 function checkForUpdates(silent) {
@@ -393,9 +512,7 @@ function checkForUpdates(silent) {
     return;
   }
   updateCheckSilent = !!silent;
-  autoUpdater.checkForUpdates().catch((e) => {
-    console.error('Update check failed:', e);
-  });
+  autoUpdater.checkForUpdates().catch(e => console.error('Update check failed:', e));
 }
 
 function setupAutoUpdater() {
@@ -447,26 +564,14 @@ function setupAutoUpdater() {
       title: i18n.t(lang, 'update.readyTitle'),
       message: i18n.t(lang, 'update.readyBody', { version: info.version })
     });
-    if (result === 0) {
-      setImmediate(() => autoUpdater.quitAndInstall());
-    }
+    if (result === 0) setImmediate(() => autoUpdater.quitAndInstall());
   });
 }
 
-function broadcastLanguage() {
-  const lang = loadConfig().language;
-  const bundle = i18n.getBundle(lang);
-  const payload = { lang, bundle };
-  if (floatingWindow && !floatingWindow.isDestroyed()) {
-    floatingWindow.webContents.send('language-changed', payload);
-  }
-  if (settingsWindow && !settingsWindow.isDestroyed()) {
-    settingsWindow.webContents.send('language-changed', payload);
-  }
-  buildTray();
-}
+// ===== IPC =====
 
 ipcMain.handle('config:get', () => loadConfig());
+
 ipcMain.handle('config:save', (_e, cfg) => {
   const prev = loadConfig();
   saveConfig(cfg);
@@ -475,10 +580,23 @@ ipcMain.handle('config:save', (_e, cfg) => {
   if (prev.language !== cfg.language) broadcastLanguage();
   return true;
 });
+
+ipcMain.handle('profile:test', async (_e, profile) => {
+  try {
+    const entries = await fetchGlucoseForProfile(profile);
+    return { ok: true, sample: entries[0] };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
+ipcMain.handle('profile:new', () => newProfile({ name: '' }));
+
 ipcMain.handle('i18n:get', () => {
   const lang = loadConfig().language;
   return { lang, bundle: i18n.getBundle(lang), supported: i18n.SUPPORTED };
 });
+
 ipcMain.handle('i18n:setLanguage', (_e, lang) => {
   if (!i18n.SUPPORTED.includes(lang)) return false;
   const cfg = loadConfig();
@@ -487,62 +605,67 @@ ipcMain.handle('i18n:setLanguage', (_e, lang) => {
   broadcastLanguage();
   return true;
 });
-ipcMain.handle('config:test', async (_e, cfg) => {
-  try {
-    const entries = await fetchGlucose(cfg);
-    return { ok: true, sample: entries[0] };
-  } catch (e) {
-    return { ok: false, error: e.message };
-  }
-});
+
 ipcMain.on('open-settings', openSettings);
 ipcMain.on('open-trend', openTrend);
 ipcMain.on('quit-app', () => app.quit());
 
-ipcMain.handle('fetch-trend', async () => {
-  const cfg = loadConfig();
-  if (!cfg.nsUrl) throw new Error('Nightscout URL not configured');
-  const hours = Math.max(1, Math.min(24, cfg.trendHours || 4));
-  const base = cfg.nsUrl.replace(/\/+$/, '');
-  const sinceMs = Date.now() - hours * 60 * 60 * 1000;
-  // Use NS find filter so we never miss entries within window. count cap is large.
-  let url = `${base}/api/v1/entries.json?count=300&find[date][$gte]=${sinceMs}`;
-  if (cfg.token) {
-    const hash = crypto.createHash('sha1').update(cfg.token).digest('hex');
-    url += `&secret=${hash}&token=${encodeURIComponent(cfg.token)}`;
-  }
-  const data = await fetchJson(url);
-  return {
-    entries: Array.isArray(data) ? data.filter(e => typeof e.sgv === 'number') : [],
-    units: cfg.units,
-    hours,
-    thresholds: {
-      urgentHigh: cfg.urgentHigh,
-      high: cfg.high,
-      low: cfg.low,
-      urgentLow: cfg.urgentLow
-    }
-  };
-});
 ipcMain.on('floating:report-size', (_e, size) => {
   if (!floatingWindow || floatingWindow.isDestroyed()) return;
   if (!size || !size.width || !size.height) return;
   const targetW = Math.max(140, Math.min(800, Math.ceil(size.width)));
-  const targetH = Math.max(60, Math.min(400, Math.ceil(size.height)));
+  const targetH = Math.max(60, Math.min(800, Math.ceil(size.height)));
   const bounds = floatingWindow.getBounds();
   if (Math.abs(bounds.width - targetW) < 4 && Math.abs(bounds.height - targetH) < 4) return;
-  // Anchor the right edge so widget stays put when growing/shrinking.
   const newX = bounds.x + (bounds.width - targetW);
   floatingWindow.setBounds({ x: newX, y: bounds.y, width: targetW, height: targetH }, false);
 });
+
+ipcMain.handle('fetch-trend', async (_e, profileId) => {
+  const cfg = loadConfig();
+  let profile = cfg.profiles.find(p => p.id === profileId);
+  if (!profile) profile = cfg.profiles.find(p => p.enabled && p.nsUrl);
+  if (!profile) throw new Error('No profile selected');
+
+  const hours = Math.max(1, Math.min(24, cfg.trendHours || 4));
+  const base = profile.nsUrl.replace(/\/+$/, '');
+  const sinceMs = Date.now() - hours * 60 * 60 * 1000;
+  let url = `${base}/api/v1/entries.json?count=300&find[date][$gte]=${sinceMs}`;
+  if (profile.token) {
+    const hash = crypto.createHash('sha1').update(profile.token).digest('hex');
+    url += `&secret=${hash}&token=${encodeURIComponent(profile.token)}`;
+  }
+  const data = await fetchJson(url);
+  return {
+    profileId: profile.id,
+    profileName: profile.name,
+    entries: Array.isArray(data) ? data.filter(e => typeof e.sgv === 'number') : [],
+    units: cfg.units,
+    hours,
+    thresholds: {
+      urgentHigh: profile.urgentHigh,
+      high: profile.high,
+      low: profile.low,
+      urgentLow: profile.urgentLow
+    }
+  };
+});
+
+ipcMain.handle('profiles:list', () => {
+  const cfg = loadConfig();
+  return cfg.profiles
+    .filter(p => p.enabled && p.nsUrl)
+    .map(p => ({ id: p.id, name: p.name }));
+});
+
+// ===== Lifecycle =====
 
 app.whenReady().then(() => {
   buildTray();
   applyVisibility();
   setupAutoUpdater();
   const cfg = loadConfig();
-  if (!cfg.nsUrl) openSettings();
-  // First check 30s after launch (let app settle), then every 6 hours.
+  if (cfg.profiles.length === 0) openSettings();
   setTimeout(() => checkForUpdates(true), 30 * 1000);
   setInterval(() => checkForUpdates(true), 6 * 60 * 60 * 1000);
 });
@@ -554,7 +677,7 @@ app.on('activate', () => {
     floatingWindow.show();
   }
   const cfg = loadConfig();
-  if (!cfg.nsUrl) openSettings();
+  if (cfg.profiles.length === 0) openSettings();
 });
 
 app.on('window-all-closed', (e) => { e.preventDefault(); });

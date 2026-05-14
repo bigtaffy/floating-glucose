@@ -41,14 +41,62 @@
     font-size: 13px;
   }
   button.primary { background: #2a7a2a; color: #fff; border-color: #2a7a2a; }
+  button.danger  { background: #fff; color: #b03030; border-color: #d8a8a8; }
+  button.small   { padding: 4px 10px; font-size: 12px; }
   button:hover { filter: brightness(0.95); }
   .status { margin-top: 8px; font-size: 12px; min-height: 16px; }
   .status.ok { color: #2a7a2a; }
   .status.err { color: #b03030; }
   .hint { color: #777; font-size: 11px; margin-top: 2px; }
+
+  /* ===== Profile list ===== */
+  .profile-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+  .profile-item {
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
+    gap: 12px;
+    align-items: center;
+    padding: 10px 12px;
+    background: #fafafa;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+  }
+  .profile-item.editing {
+    grid-template-columns: 1fr;
+    background: #fff;
+    border-color: #2a7a2a;
+    border-width: 2px;
+  }
+  .profile-color-dot {
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .profile-summary { display: flex; flex-direction: column; min-width: 0; }
+  .profile-name { font-weight: 600; }
+  .profile-meta { font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .profile-item button { font-size: 12px; padding: 5px 10px; }
+  .add-profile {
+    background: #fff;
+    border: 1px dashed #2a7a2a;
+    color: #2a7a2a;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    width: 100%;
+    font-weight: 600;
+  }
+  .add-profile:hover { background: #f0f8f0; }
+
+  /* ===== Inline editor ===== */
+  .editor h4 { margin: 0 0 10px; color: #2a7a2a; font-size: 14px; }
+  .editor-actions { display: flex; gap: 8px; justify-content: space-between; margin-top: 10px; }
+  .editor-actions .left  { display: flex; gap: 8px; }
+  .editor-actions .right { display: flex; gap: 8px; }
 </style>
 </head>
 <body>
+
   <fieldset>
     <legend data-i18n="settings.languageSection">Language</legend>
     <label data-i18n="settings.languageLabel">Interface language</label>
@@ -60,55 +108,22 @@
     </select>
   </fieldset>
 
+  <!-- ===== Profiles ===== -->
   <fieldset>
-    <legend data-i18n="settings.nightscoutSection">Nightscout settings</legend>
-    <label data-i18n="settings.urlLabel">Your Nightscout URL</label>
-    <input type="text" id="nsUrl" data-i18n-placeholder="settings.urlPlaceholder" placeholder="https://09xxxxxxxx.t1ns.tw/" />
-    <div class="hint" data-i18n="settings.urlHint">Full URL including https://</div>
+    <legend data-i18n="settings.profilesSection">Profiles</legend>
+    <div id="profile-list" class="profile-list"></div>
+    <button id="add-profile-btn" class="add-profile" type="button">
+      <span data-i18n="settings.addProfile">+ Add profile</span>
+    </button>
+  </fieldset>
 
-    <label data-i18n="settings.tokenLabel">Access Token / Password</label>
-    <input type="password" id="token" data-i18n-placeholder="settings.tokenPlaceholder" placeholder="NS password / token" />
-
+  <!-- ===== Shared display settings ===== -->
+  <fieldset>
+    <legend data-i18n="settings.displaySection">Display</legend>
     <div class="inline">
       <label style="margin:0;"><input type="radio" name="units" value="mg/dL" /> <span data-i18n="settings.unitsMgdl">mg/dL</span></label>
       <label style="margin:0;"><input type="radio" name="units" value="mmol/L" /> <span data-i18n="settings.unitsMmol">mmol/L</span></label>
     </div>
-  </fieldset>
-
-  <fieldset>
-    <legend data-i18n="settings.alarmsSection">Alarm thresholds</legend>
-    <div class="row">
-      <div>
-        <label data-i18n="settings.urgentHigh">Urgent High</label>
-        <input type="number" id="urgentHigh" />
-      </div>
-      <div>
-        <label data-i18n="settings.high">High</label>
-        <input type="number" id="high" />
-      </div>
-      <div>
-        <label data-i18n="settings.low">Low</label>
-        <input type="number" id="low" />
-      </div>
-      <div>
-        <label data-i18n="settings.urgentLow">Urgent Low</label>
-        <input type="number" id="urgentLow" />
-      </div>
-    </div>
-    <div class="row">
-      <div>
-        <label data-i18n="settings.staleWarn">Stale warn (min)</label>
-        <input type="number" id="staleWarn" />
-      </div>
-      <div>
-        <label data-i18n="settings.staleUrgent">Stale urgent (min)</label>
-        <input type="number" id="staleUrgent" />
-      </div>
-    </div>
-  </fieldset>
-
-  <fieldset>
-    <legend data-i18n="settings.displaySection">Display</legend>
     <div class="row">
       <div>
         <label data-i18n="settings.fontSize">Font size (px)</label>
@@ -127,33 +142,26 @@
   <fieldset>
     <legend data-i18n="settings.alertsSection">Alerts</legend>
     <label><input type="checkbox" id="enableSoundAlarms" /> <span data-i18n="settings.enableSoundAlarms">Play sound when urgent high/low</span></label>
-    <label><input type="checkbox" id="enableStaleNotification" /> <span data-i18n="settings.enableStaleNotification">System notification when CGM disconnects</span></label>
+    <label><input type="checkbox" id="enableStaleNotification" /> <span data-i18n="settings.enableStaleNotification">System notification on urgent / CGM disconnect</span></label>
     <label data-i18n="settings.trendHours">Trend chart hours</label>
-    <input type="number" id="trendHours" min="1" max="24" />
+    <input type="number" id="trendHours" min="1" max="24" style="width:120px;" />
   </fieldset>
 
   <div class="status" id="status"></div>
   <div class="actions">
-    <button id="testBtn" data-i18n="settings.testBtn">Test connection</button>
-    <button id="saveBtn" class="primary" data-i18n="settings.saveBtn">Verify and save</button>
+    <button id="saveBtn" class="primary" type="button" data-i18n="settings.saveBtn">Save</button>
   </div>
 
 <script>
-  const numericIds = ['urgentHigh','high','low','urgentLow','staleWarn','staleUrgent','fontSize','refreshSec','trendHours'];
-  const textIds = ['nsUrl','token'];
-  const boolIds = ['showFloating','showInMenuBar','hideDock','enableSoundAlarms','enableStaleNotification'];
-  const status = document.getElementById('status');
-  const languageSelect = document.getElementById('language');
-
   let bundle = {};
-  let currentLang = 'en';
+  let config = null;            // full config object held in memory
+  let editingId = null;         // currently expanded profile id
 
   function fmt(key, params) {
     let s = bundle[key] || key;
     if (params) s = s.replace(/\{(\w+)\}/g, (_, k) => (params[k] !== undefined ? params[k] : `{${k}}`));
     return s;
   }
-
   function applyI18n() {
     document.title = fmt('settings.title');
     document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -164,81 +172,211 @@
     });
   }
 
+  const status = document.getElementById('status');
   function setStatus(msg, cls) {
     status.textContent = msg || '';
     status.className = 'status ' + (cls || '');
   }
 
-  function readForm() {
-    const cfg = {};
-    for (const id of textIds) cfg[id] = document.getElementById(id).value.trim();
-    for (const id of numericIds) cfg[id] = Number(document.getElementById(id).value);
-    for (const id of boolIds) cfg[id] = document.getElementById(id).checked;
-    cfg.units = document.querySelector('input[name=units]:checked')?.value || 'mg/dL';
-    cfg.language = languageSelect.value;
-    return cfg;
+  /* ===== Profile list rendering ===== */
+  const profileList = document.getElementById('profile-list');
+
+  function renderProfileList() {
+    profileList.innerHTML = '';
+    if (!config.profiles || config.profiles.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'hint';
+      empty.style.padding = '20px';
+      empty.style.textAlign = 'center';
+      empty.textContent = fmt('settings.noProfiles');
+      profileList.appendChild(empty);
+      return;
+    }
+    config.profiles.forEach(p => {
+      const item = document.createElement('div');
+      item.className = 'profile-item';
+      if (editingId === p.id) {
+        item.classList.add('editing');
+        item.innerHTML = renderEditor(p);
+        wireEditor(item, p);
+      } else {
+        item.innerHTML = renderSummary(p);
+        item.querySelector('[data-act="edit"]').addEventListener('click', () => {
+          editingId = p.id;
+          renderProfileList();
+        });
+        item.querySelector('[data-act="toggle"]').addEventListener('click', () => {
+          p.enabled = !p.enabled;
+          renderProfileList();
+        });
+      }
+      profileList.appendChild(item);
+    });
   }
 
-  async function loadConfigIntoForm() {
-    const cfg = await window.api.getConfig();
-    for (const id of textIds) {
+  function renderSummary(p) {
+    const meta = p.nsUrl
+      ? new URL(p.nsUrl).hostname + (p.token ? ' · 🔑' : '')
+      : fmt('settings.noUrl');
+    const enabledBtn = p.enabled ? fmt('settings.disable') : fmt('settings.enable');
+    return `
+      <span class="profile-color-dot" style="background:${p.color || '#6ee36b'};"></span>
+      <div class="profile-summary">
+        <div class="profile-name">${escapeHtml(p.name || fmt('settings.unnamed'))}</div>
+        <div class="profile-meta">${escapeHtml(meta)}</div>
+      </div>
+      <button class="small" data-act="toggle">${enabledBtn}</button>
+      <button class="small" data-act="edit">${fmt('settings.edit')}</button>
+    `;
+  }
+
+  function renderEditor(p) {
+    return `
+      <div class="editor">
+        <h4>${fmt('settings.editingProfile')}</h4>
+        <label>${fmt('settings.profileName')}</label>
+        <input type="text" data-field="name" value="${escapeAttr(p.name)}" placeholder="${fmt('settings.profileNamePlaceholder')}" />
+
+        <label>${fmt('settings.urlLabel')}</label>
+        <input type="text" data-field="nsUrl" value="${escapeAttr(p.nsUrl)}" placeholder="${fmt('settings.urlPlaceholder')}" />
+
+        <label>${fmt('settings.tokenLabel')}</label>
+        <input type="password" data-field="token" value="${escapeAttr(p.token)}" placeholder="${fmt('settings.tokenPlaceholder')}" />
+
+        <div class="row" style="margin-top:10px;">
+          <div><label>${fmt('settings.urgentHigh')}</label><input type="number" data-field="urgentHigh" value="${p.urgentHigh}" /></div>
+          <div><label>${fmt('settings.high')}</label><input type="number" data-field="high" value="${p.high}" /></div>
+          <div><label>${fmt('settings.low')}</label><input type="number" data-field="low" value="${p.low}" /></div>
+          <div><label>${fmt('settings.urgentLow')}</label><input type="number" data-field="urgentLow" value="${p.urgentLow}" /></div>
+        </div>
+        <div class="row">
+          <div><label>${fmt('settings.staleWarn')}</label><input type="number" data-field="staleWarn" value="${p.staleWarn}" /></div>
+          <div><label>${fmt('settings.staleUrgent')}</label><input type="number" data-field="staleUrgent" value="${p.staleUrgent}" /></div>
+        </div>
+
+        <div class="editor-actions">
+          <div class="left">
+            <button class="danger" data-act="delete">${fmt('settings.delete')}</button>
+          </div>
+          <div class="right">
+            <button data-act="test">${fmt('settings.testBtn')}</button>
+            <button class="primary" data-act="done">${fmt('settings.done')}</button>
+          </div>
+        </div>
+        <div class="status" data-editor-status></div>
+      </div>
+    `;
+  }
+
+  function wireEditor(item, p) {
+    item.querySelectorAll('[data-field]').forEach(inp => {
+      inp.addEventListener('input', () => {
+        const key = inp.getAttribute('data-field');
+        p[key] = inp.type === 'number' ? Number(inp.value) : inp.value;
+      });
+    });
+
+    item.querySelector('[data-act="done"]').addEventListener('click', () => {
+      editingId = null;
+      renderProfileList();
+    });
+
+    item.querySelector('[data-act="test"]').addEventListener('click', async () => {
+      const editorStatus = item.querySelector('[data-editor-status]');
+      editorStatus.textContent = fmt('settings.testing');
+      editorStatus.className = 'status';
+      const r = await window.api.testProfile(p);
+      if (r.ok) {
+        editorStatus.textContent = fmt('settings.testOk', { sgv: r.sample.sgv, direction: r.sample.direction });
+        editorStatus.className = 'status ok';
+      } else {
+        editorStatus.textContent = fmt('settings.testFail', { error: r.error });
+        editorStatus.className = 'status err';
+      }
+    });
+
+    item.querySelector('[data-act="delete"]').addEventListener('click', () => {
+      if (!confirm(fmt('settings.deleteConfirm', { name: p.name || fmt('settings.unnamed') }))) return;
+      config.profiles = config.profiles.filter(x => x.id !== p.id);
+      editingId = null;
+      renderProfileList();
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  document.getElementById('add-profile-btn').addEventListener('click', async () => {
+    const fresh = await window.api.newProfile();
+    config.profiles = config.profiles || [];
+    config.profiles.push(fresh);
+    editingId = fresh.id;
+    renderProfileList();
+  });
+
+  /* ===== Shared form fields ===== */
+  const sharedNumericIds = ['fontSize','refreshSec','trendHours'];
+  const sharedBoolIds = ['showFloating','showInMenuBar','hideDock','enableSoundAlarms','enableStaleNotification'];
+  const languageSelect = document.getElementById('language');
+
+  function readSharedIntoConfig() {
+    for (const id of sharedNumericIds) {
       const el = document.getElementById(id);
-      if (cfg[id] !== undefined && cfg[id] !== null) el.value = cfg[id];
+      if (el) config[id] = Number(el.value);
     }
-    for (const id of numericIds) {
+    for (const id of sharedBoolIds) {
       const el = document.getElementById(id);
-      if (cfg[id] !== undefined && cfg[id] !== null) el.value = cfg[id];
+      if (el) config[id] = el.checked;
     }
-    for (const id of boolIds) {
+    config.units = document.querySelector('input[name=units]:checked')?.value || 'mg/dL';
+    config.language = languageSelect.value;
+  }
+
+  function populateShared() {
+    for (const id of sharedNumericIds) {
       const el = document.getElementById(id);
-      if (cfg[id] !== undefined) el.checked = !!cfg[id];
+      if (el && config[id] !== undefined && config[id] !== null) el.value = config[id];
     }
-    const unitsRadio = document.querySelector(`input[name=units][value="${cfg.units}"]`);
+    for (const id of sharedBoolIds) {
+      const el = document.getElementById(id);
+      if (el) el.checked = !!config[id];
+    }
+    const unitsRadio = document.querySelector(`input[name=units][value="${config.units}"]`);
     if (unitsRadio) unitsRadio.checked = true;
-    languageSelect.value = cfg.language || 'en';
+    languageSelect.value = config.language || 'en';
   }
 
   languageSelect.addEventListener('change', async () => {
     await window.api.setLanguage(languageSelect.value);
   });
 
-  document.getElementById('testBtn').addEventListener('click', async () => {
-    setStatus(fmt('settings.testing'), '');
-    const cfg = readForm();
-    const r = await window.api.testConfig(cfg);
-    if (r.ok) {
-      setStatus(fmt('settings.testOk', { sgv: r.sample.sgv, direction: r.sample.direction }), 'ok');
-    } else {
-      setStatus(fmt('settings.testFail', { error: r.error }), 'err');
-    }
-  });
-
+  /* ===== Save ===== */
   document.getElementById('saveBtn').addEventListener('click', async () => {
-    const cfg = readForm();
-    const r = await window.api.testConfig(cfg);
-    if (!r.ok) {
-      setStatus(fmt('settings.saveFail', { error: r.error }), 'err');
-      return;
-    }
-    const current = await window.api.getConfig();
-    await window.api.saveConfig({ ...current, ...cfg });
+    readSharedIntoConfig();
+    await window.api.saveConfig(config);
     setStatus(fmt('settings.saved'), 'ok');
-    setTimeout(() => window.close(), 500);
+    setTimeout(() => window.close(), 400);
   });
 
+  /* ===== Init ===== */
   window.api.onLanguageChanged((data) => {
     bundle = data.bundle;
-    currentLang = data.lang;
     languageSelect.value = data.lang;
     applyI18n();
+    renderProfileList();
   });
 
   (async () => {
     const i = await window.api.getI18n();
     bundle = i.bundle;
-    currentLang = i.lang;
     applyI18n();
-    await loadConfigIntoForm();
+    config = await window.api.getConfig();
+    populateShared();
+    renderProfileList();
   })();
 </script>
 </body>

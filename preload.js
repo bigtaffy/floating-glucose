@@ -1,18 +1,32 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
+  // config
   getConfig: () => ipcRenderer.invoke('config:get'),
   saveConfig: (cfg) => ipcRenderer.invoke('config:save', cfg),
-  testConfig: (cfg) => ipcRenderer.invoke('config:test', cfg),
+
+  // profiles
+  testProfile: (profile) => ipcRenderer.invoke('profile:test', profile),
+  newProfile: () => ipcRenderer.invoke('profile:new'),
+  listProfiles: () => ipcRenderer.invoke('profiles:list'),
+
+  // windows
   openSettings: () => ipcRenderer.send('open-settings'),
   openTrend: () => ipcRenderer.send('open-trend'),
   quit: () => ipcRenderer.send('quit-app'),
-  onGlucoseUpdate: (cb) => ipcRenderer.on('glucose-update', (_e, data) => cb(data)),
-  onGlucoseError: (cb) => ipcRenderer.on('glucose-error', (_e, data) => cb(data)),
+
+  // glucose events (multi-profile)
+  onGlucoseUpdateAll: (cb) => ipcRenderer.on('glucose-update-all', (_e, data) => cb(data)),
   onPlayAlarm: (cb) => ipcRenderer.on('play-alarm', (_e, data) => cb(data)),
+
+  // i18n
   getI18n: () => ipcRenderer.invoke('i18n:get'),
   setLanguage: (lang) => ipcRenderer.invoke('i18n:setLanguage', lang),
   onLanguageChanged: (cb) => ipcRenderer.on('language-changed', (_e, data) => cb(data)),
+
+  // window sizing
   reportContentSize: (size) => ipcRenderer.send('floating:report-size', size),
-  fetchTrend: () => ipcRenderer.invoke('fetch-trend')
+
+  // trend
+  fetchTrend: (profileId) => ipcRenderer.invoke('fetch-trend', profileId)
 });
