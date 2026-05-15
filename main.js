@@ -1,8 +1,6 @@
-const { app, BrowserWindow, ipcMain, Menu, Tray, Notification, dialog, nativeImage, screen, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, Notification, dialog, nativeImage, screen, shell, net, session } = require('electron');
 const path = require('path');
 const fs = require('fs');
-const https = require('https');
-const http = require('http');
 const crypto = require('crypto');
 const { autoUpdater } = require('electron-updater');
 const i18n = require('./i18n');
@@ -40,7 +38,11 @@ const DEFAULT_CONFIG = {
   showTrayValue: true,
   enableSoundAlarms: true,
   enableStaleNotification: true,
-  trendHours: 4
+  trendHours: 4,
+  // Empty string = use system proxy (Chromium auto-detects Windows / macOS
+  // proxy settings). Set to e.g. 'http://proxy.company.com:8080' to override.
+  // 'direct' = bypass even system proxy.
+  proxyUrl: ''
 };
 
 // For picking which profile's value to render into the Windows tray icon
@@ -154,41 +156,101 @@ function describeNetError(err) {
   return 'Network error';
 }
 
+/**
+ * HTTPS GET → parsed JSON, using Electron's net.request so the underlying
+ * Chromium network stack handles proxy resolution automatically:
+ *   - Windows system proxy (Settings → Network → Proxy) is detected
+ *   - macOS system proxy is detected
+ *   - PAC files are evaluated
+ *   - User-set override via session.setProxy() (proxyUrl in our settings)
+ * Falls back gracefully on errors with a human-readable message.
+ */
 function fetchJson(urlStr) {
   return new Promise((resolve, reject) => {
-    let url;
-    try {
-      url = new URL(urlStr);
-    } catch (_) {
-      return reject(new Error('Invalid URL'));
-    }
-    const lib = url.protocol === 'https:' ? https : http;
-    const req = lib.get(url, (res) => {
-      if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
-        return fetchJson(new URL(res.headers.location, urlStr).toString()).then(resolve, reject);
+    try { new URL(urlStr); } catch (_) { return reject(new Error('Invalid URL')); }
+
+    let settled = false;
+    const settle = (fn, val) => { if (!settled) { settled = true; fn(val); } };
+
+    const request = net.request({
+      method: 'GET',
+      url: urlStr,
+      redirect: 'follow',
+      useSessionCookies: false
+    });
+
+    const timeout = setTimeout(() => {
+      try { request.abort(); } catch (_) {}
+      settle(reject, new Error('Connection timed out'));
+    }, 15000);
+
+    request.on('response', (response) => {
+      const status = response.statusCode;
+      if (status === 401 || status === 403) {
+        response.on('data', () => {});
+        response.on('end', () => {});
+        clearTimeout(timeout);
+        return settle(reject, new Error('Unauthorized — check your token / password'));
       }
-      if (res.statusCode === 401 || res.statusCode === 403) {
-        res.resume();
-        return reject(new Error('Unauthorized — check your token / password'));
+      if (status < 200 || status >= 300) {
+        response.on('data', () => {});
+        response.on('end', () => {});
+        clearTimeout(timeout);
+        return settle(reject, new Error(`HTTP ${status}`));
       }
-      if (res.statusCode !== 200) {
-        res.resume();
-        return reject(new Error(`HTTP ${res.statusCode}`));
-      }
-      let body = '';
-      res.setEncoding('utf8');
-      res.on('data', (c) => body += c);
-      res.on('end', () => {
+
+      const chunks = [];
+      response.on('data', (chunk) => chunks.push(chunk));
+      response.on('end', () => {
+        clearTimeout(timeout);
         try {
-          resolve(JSON.parse(body));
+          const body = Buffer.concat(chunks).toString('utf8');
+          settle(resolve, JSON.parse(body));
         } catch (_) {
-          reject(new Error('Server did not return valid data'));
+          settle(reject, new Error('Server did not return valid data'));
         }
       });
+      response.on('error', (err) => {
+        clearTimeout(timeout);
+        settle(reject, new Error(describeNetError(err)));
+      });
     });
-    req.on('error', (err) => reject(new Error(describeNetError(err))));
-    req.setTimeout(15000, () => req.destroy(new Error('Connection timed out')));
+
+    request.on('error', (err) => {
+      clearTimeout(timeout);
+      settle(reject, new Error(describeNetError(err)));
+    });
+
+    request.on('abort', () => {
+      clearTimeout(timeout);
+      settle(reject, new Error('Request aborted'));
+    });
+
+    request.end();
   });
+}
+
+/**
+ * Apply proxy config to the default session. Call after app.whenReady() and
+ * whenever the user changes the proxyUrl in settings.
+ *   ''        → use system proxy (Chromium auto-detects)
+ *   'direct'  → bypass proxy entirely
+ *   anything  → use that proxy (e.g. 'http://proxy.company.com:8080')
+ */
+async function applyProxyConfig() {
+  const cfg = loadConfig();
+  const raw = (cfg.proxyUrl || '').trim();
+  try {
+    if (!raw) {
+      await session.defaultSession.setProxy({ mode: 'system' });
+    } else if (raw.toLowerCase() === 'direct') {
+      await session.defaultSession.setProxy({ mode: 'direct' });
+    } else {
+      await session.defaultSession.setProxy({ proxyRules: raw });
+    }
+  } catch (e) {
+    console.error('Failed to apply proxy config:', e);
+  }
 }
 
 async function fetchGlucoseForProfile(profile) {
@@ -682,9 +744,10 @@ function setupAutoUpdater() {
 
 ipcMain.handle('config:get', () => loadConfig());
 
-ipcMain.handle('config:save', (_e, cfg) => {
+ipcMain.handle('config:save', async (_e, cfg) => {
   const prev = loadConfig();
   saveConfig(cfg);
+  if (prev.proxyUrl !== cfg.proxyUrl) await applyProxyConfig();
   scheduleRefresh();
   applyVisibility();
   if (prev.language !== cfg.language) broadcastLanguage();
@@ -787,7 +850,9 @@ ipcMain.on('tray:icon-ready', (_e, dataUrl) => {
 
 // ===== Lifecycle =====
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Apply proxy first — every net.request that follows will respect it
+  await applyProxyConfig();
   buildTray();
   applyVisibility();
   setupAutoUpdater();

@@ -62,7 +62,7 @@
       <div class="stats" id="stats"></div>
     </header>
     <div class="chart-wrap">
-      <svg id="chart" preserveAspectRatio="none"></svg>
+      <svg id="chart"></svg>
       <div class="loading" id="loading">Loading...</div>
       <div class="error" id="error" style="display:none;"></div>
     </div>
@@ -117,15 +117,18 @@
     const now = Date.now();
     const since = now - hours * 60 * 60 * 1000;
 
-    // SVG sizing
+    // SVG sizing — use actual container dimensions in viewBox so 1 SVG unit
+    // equals 1 pixel and nothing gets stretched on window resize.
     const rect = chartEl.getBoundingClientRect();
-    const W = Math.max(300, rect.width);
-    const H = Math.max(150, rect.height);
-    const padL = 36, padR = 12, padT = 12, padB = 22;
+    const W = Math.max(300, Math.floor(rect.width));
+    const H = Math.max(150, Math.floor(rect.height));
+    const padL = 44, padR = 12, padT = 12, padB = 22;
     const innerW = W - padL - padR;
     const innerH = H - padT - padB;
 
     chartEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    chartEl.setAttribute('width', W);
+    chartEl.setAttribute('height', H);
 
     // Y-axis range: include thresholds + data extremes
     const sgvValues = points.map(p => p.sgv);
@@ -166,9 +169,32 @@
       svg += `<text x="${x}" y="${H - padB + 14}" text-anchor="middle" fill="#888" font-size="10">${fmtTime(ts)}</text>`;
     }
 
-    // Y-axis labels (top/bottom)
-    svg += `<text x="${padL - 6}" y="${padT + 8}" text-anchor="end" fill="#888" font-size="10">${displayValue(yMax)}</text>`;
-    svg += `<text x="${padL - 6}" y="${H - padB - 2}" text-anchor="end" fill="#888" font-size="10">${displayValue(yMin)}</text>`;
+    // Y-axis ticks at nice round intervals in the displayed unit
+    // mg/dL → every 40 (40, 80, 120, ...) or every 20 if range is small
+    // mmol/L → every 2 mmol (4, 6, 8, ...) or every 1 if range is small
+    const yTicks = (() => {
+      if (units === 'mmol/L') {
+        const mmolRange = (yMax - yMin) / 18;
+        const stepMmol = mmolRange < 8 ? 1 : 2;
+        const stepMg = stepMmol * 18; // convert back for positioning
+        const start = Math.ceil(yMin / stepMg) * stepMg;
+        const out = [];
+        for (let v = start; v <= yMax; v += stepMg) out.push(v);
+        return out;
+      } else {
+        const range = yMax - yMin;
+        const step = range < 120 ? 20 : 40;
+        const start = Math.ceil(yMin / step) * step;
+        const out = [];
+        for (let v = start; v <= yMax; v += step) out.push(v);
+        return out;
+      }
+    })();
+    yTicks.forEach(t => {
+      const y = yScale(t);
+      svg += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" stroke="#2a2a2a" stroke-width="0.5"/>`;
+      svg += `<text x="${padL - 6}" y="${y + 3}" text-anchor="end" fill="#aaa" font-size="10">${displayValue(t)}</text>`;
+    });
 
     // Polyline through points (gaps for big time skips)
     let pathSegments = '';
@@ -255,11 +281,14 @@
     } catch (e) { console.error('loadProfiles failed', e); }
   }
 
+  let lastData = null;
+
   async function refresh() {
     try {
       await loadProfiles();
       const data = await window.api.fetchTrend(currentProfileId);
       currentProfileId = data.profileId;
+      lastData = data;
       render(data);
     } catch (e) {
       errorEl.textContent = (e && e.message) || String(e);
@@ -268,13 +297,23 @@
     }
   }
 
+  // Re-layout (no refetch) when the window is resized. Debounced so a single
+  // drag doesn't trigger dozens of renders.
+  let resizeTimer = null;
+  function onResize() {
+    if (resizeTimer) clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (lastData) render(lastData);
+    }, 80);
+  }
+
   function applyI18n() {
     document.title = fmt('trend.title');
     titleEl.textContent = fmt('trend.title');
   }
 
   window.api.onLanguageChanged((d) => { bundle = d.bundle; applyI18n(); refresh(); });
-  window.addEventListener('resize', () => refresh());
+  window.addEventListener('resize', onResize);
 
   // If user re-opens the trend window for a different profile while it's
   // already open, switch to that profile.

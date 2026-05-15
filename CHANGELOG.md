@@ -7,7 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [2.1.0] - 2026-05-14
+## [2.1.0] - 2026-05-15
+
+### Added — Proxy 支援（公司網路必備）
+
+- **自動偵測系統 Proxy** — 改用 Electron 的 `net.request` 取代 Node `https`，Chromium 網路層會**自動讀取 Windows / macOS 系統 proxy 設定**。公司網路使用者只要在系統設定（Windows 設定 → 網路 → 代理／macOS 系統設定 → 網路）填好 proxy，App 自動跟進，不用再靠 Proxifier 等第三方工具
+- **設定畫面新增 Proxy 欄位** — 系統 proxy 偵測不到時可手動填 `http://proxy.company.com:8080`，或輸入 `direct` 強制直連
+- 變更 proxy 設定即時生效（不用重開 App）
 
 ### Added — Windows 系統匣顯示血糖數字
 
