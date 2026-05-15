@@ -154,6 +154,7 @@
     <label style="margin-top:10px;"><input type="checkbox" id="showFloating" /> <span data-i18n="settings.showFloating">Show floating widget on desktop</span></label>
     <label><input type="checkbox" id="showInMenuBar" /> <span data-i18n="settings.showInMenuBar">Show value in menu bar (macOS only)</span></label>
     <label><input type="checkbox" id="hideDock" /> <span data-i18n="settings.hideDock">Hide Dock icon (macOS only)</span></label>
+    <label><input type="checkbox" id="showTrayValue" /> <span data-i18n="settings.showTrayValue">Show value in system tray icon (Windows only)</span></label>
   </fieldset>
 
   <fieldset>
@@ -162,6 +163,13 @@
     <label><input type="checkbox" id="enableStaleNotification" /> <span data-i18n="settings.enableStaleNotification">System notification on urgent / CGM disconnect</span></label>
     <label data-i18n="settings.trendHours">Trend chart hours</label>
     <input type="number" id="trendHours" min="1" max="24" style="width:120px;" />
+  </fieldset>
+
+  <fieldset>
+    <legend data-i18n="settings.proxySection">Network / Proxy</legend>
+    <label data-i18n="settings.proxyUrlLabel">HTTP/HTTPS Proxy</label>
+    <input type="text" id="proxyUrl" data-i18n-placeholder="settings.proxyUrlPlaceholder" placeholder="(leave blank to use system proxy)" />
+    <div class="hint" data-i18n="settings.proxyUrlHint">Empty = auto-detect from system settings. Type 'direct' to bypass proxy. Or specify e.g. http://proxy.company.com:8080</div>
   </fieldset>
 
   <div class="status" id="status"></div>
@@ -338,7 +346,8 @@
 
   /* ===== Shared form fields ===== */
   const sharedNumericIds = ['fontSize','refreshSec','trendHours'];
-  const sharedBoolIds = ['showFloating','showInMenuBar','hideDock','enableSoundAlarms','enableStaleNotification'];
+  const sharedBoolIds = ['showFloating','showInMenuBar','hideDock','showTrayValue','enableSoundAlarms','enableStaleNotification'];
+  const sharedTextIds = ['proxyUrl'];
   const languageSelect = document.getElementById('language');
 
   function readSharedIntoConfig() {
@@ -349,6 +358,10 @@
     for (const id of sharedBoolIds) {
       const el = document.getElementById(id);
       if (el) config[id] = el.checked;
+    }
+    for (const id of sharedTextIds) {
+      const el = document.getElementById(id);
+      if (el) config[id] = el.value.trim();
     }
     config.units = document.querySelector('input[name=units]:checked')?.value || 'mg/dL';
     config.language = languageSelect.value;
@@ -362,6 +375,10 @@
     for (const id of sharedBoolIds) {
       const el = document.getElementById(id);
       if (el) el.checked = !!config[id];
+    }
+    for (const id of sharedTextIds) {
+      const el = document.getElementById(id);
+      if (el && config[id] !== undefined && config[id] !== null) el.value = config[id];
     }
     const unitsRadio = document.querySelector(`input[name=units][value="${config.units}"]`);
     if (unitsRadio) unitsRadio.checked = true;
