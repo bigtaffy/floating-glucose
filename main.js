@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, Menu, Tray, Notification, dialog, nativeImage, screen, shell, net, session } = require('electron');
+const { app, BrowserWindow, ipcMain, Menu, Tray, Notification, dialog, nativeImage, screen, shell, net, session, powerMonitor } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
@@ -529,11 +529,14 @@ function createFloatingWindow() {
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
-      nodeIntegration: false
+      nodeIntegration: false,
+      // Prevent macOS App Nap / Chromium background throttling from
+      // freezing the renderer (which manifests as the widget becoming
+      // unmovable after a few hours of inactivity).
+      backgroundThrottling: false
     }
   });
-  floatingWindow.setAlwaysOnTop(true, 'floating');
-  floatingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+  reapplyWindowFlags();
   floatingWindow.loadFile(path.join(__dirname, 'renderer', 'floating.html'));
 
   floatingWindow.on('moved', () => {
@@ -543,7 +546,35 @@ function createFloatingWindow() {
     saveConfig(c);
   });
 
+  // If the renderer crashes, recreate the floating window so it doesn't
+  // sit there silently broken (looks alive, no longer responds to drag).
+  floatingWindow.webContents.on('render-process-gone', (_e, details) => {
+    console.error('Floating renderer gone:', details.reason);
+    setTimeout(() => {
+      if (floatingWindow && !floatingWindow.isDestroyed()) floatingWindow.destroy();
+      createFloatingWindow();
+    }, 500);
+  });
+  floatingWindow.webContents.on('unresponsive', () => {
+    console.error('Floating renderer unresponsive — reloading');
+    try { floatingWindow.webContents.reload(); } catch (_) {}
+  });
+
   floatingWindow.webContents.on('did-finish-load', () => scheduleRefresh());
+}
+
+// Re-apply alwaysOnTop + visibleOnAllWorkspaces. macOS occasionally drops
+// these for transparent/frameless windows after sleep, Mission Control, or
+// long idle, with the visible symptom of the widget becoming unmovable.
+function reapplyWindowFlags() {
+  if (!floatingWindow || floatingWindow.isDestroyed()) return;
+  try {
+    floatingWindow.setAlwaysOnTop(true, 'floating');
+    floatingWindow.setVisibleOnAllWorkspaces(true, { visibleOnFullScreen: true });
+    floatingWindow.setMovable(true);
+  } catch (e) {
+    console.error('reapplyWindowFlags failed:', e);
+  }
 }
 
 let pendingTrendProfileId = null;
@@ -860,6 +891,19 @@ app.whenReady().then(async () => {
   if (cfg.profiles.length === 0) openSettings();
   setTimeout(() => checkForUpdates(true), 30 * 1000);
   setInterval(() => checkForUpdates(true), 6 * 60 * 60 * 1000);
+
+  // After macOS wakes from sleep, transparent + always-on-top windows
+  // often lose their drag region. Re-applying the flags brings it back.
+  powerMonitor.on('resume', () => {
+    console.log('System resumed — re-applying floating window flags');
+    reapplyWindowFlags();
+    refreshAll();
+  });
+  powerMonitor.on('unlock-screen', () => reapplyWindowFlags());
+
+  // Belt-and-braces: refresh flags every 10 minutes as a safety net for
+  // less-common edge cases (Mission Control, fast user switching, etc.).
+  setInterval(reapplyWindowFlags, 10 * 60 * 1000);
 });
 
 app.on('activate', () => {

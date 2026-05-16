@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-05-16
+
+### Fixed
+
+- **macOS 浮動視窗久放後無法拖曳** — 已知的 Electron + macOS + transparent + always-on-top 組合問題：系統睡眠 / 喚醒、Mission Control 切換、或長時間閒置後，視窗的拖曳事件會「失效」。多管齊下解決：
+  - `webPreferences.backgroundThrottling: false` — 關掉 macOS App Nap 對 renderer 的節流
+  - `powerMonitor.on('resume')` + `unlock-screen` 監聽 — 系統喚醒 / 解鎖時自動重新套用視窗屬性
+  - 每 10 分鐘安全網重新套用 `setAlwaysOnTop` / `setVisibleOnAllWorkspaces` / `setMovable`
+  - `webContents.on('render-process-gone')` — renderer 真的炸了就自動重建視窗
+  - `webContents.on('unresponsive')` — renderer 卡死自動 reload
+
 ## [2.1.0] - 2026-05-15
 
 ### Added — Proxy 支援（公司網路必備）
@@ -181,7 +192,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Inspired by [FloatingGlucose](https://github.com/bjornnyhus/FloatingGlucose) by Bjorn Inge Vikhammer (Windows-only original).
 
-[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/bigtaffy/floating-glucose/compare/v2.1.1...HEAD
+[2.1.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v2.1.1
 [2.1.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v2.1.0
 [2.0.0]: https://github.com/bigtaffy/floating-glucose/releases/tag/v2.0.0
 [1.1.1]: https://github.com/bigtaffy/floating-glucose/releases/tag/v1.1.1
